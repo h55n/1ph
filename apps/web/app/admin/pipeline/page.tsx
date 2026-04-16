@@ -65,7 +65,7 @@ export default async function AdminPipelinePage() {
               </tr>
             </thead>
             <tbody>
-              {runs.map(run => (
+              {runs.map((run: any) => (
                 <tr key={run.id} className="border-b border-border last:border-0 hover:bg-tag-bg transition-colors">
                   <td className="px-4 py-2 text-text-primary">{run.source}</td>
                   <td className="px-4 py-2">

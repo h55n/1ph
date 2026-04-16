@@ -6,15 +6,16 @@ import { prisma } from '@/lib/db'
 export default async function AdminHackathonsPage({
   searchParams,
 }: {
-  searchParams: { source?: string; status?: string; tier?: string }
+  searchParams: Promise<{ source?: string; status?: string; tier?: string }>
 }) {
+  const params = await searchParams
   const session = await getServerSession(authOptions)
   if ((session?.user as { role?: string })?.role !== 'ADMIN') redirect('/')
 
   const where: Record<string, unknown> = {}
-  if (searchParams.source) where.source = searchParams.source
-  if (searchParams.status) where.status = searchParams.status
-  if (searchParams.tier) where.prestigeTier = searchParams.tier
+  if (params.source) where.source = params.source
+  if (params.status) where.status = params.status
+  if (params.tier) where.prestigeTier = params.tier
 
   const hackathons = await prisma.hackathon.findMany({
     where,
@@ -78,7 +79,7 @@ export default async function AdminHackathonsPage({
             </tr>
           </thead>
           <tbody>
-            {hackathons.map(h => (
+            {hackathons.map((h: any) => (
               <tr key={h.id} className="border-b border-border last:border-0 hover:bg-tag-bg transition-colors">
                 <td className="px-3 py-2 max-w-[200px]">
                   <span className="text-text-primary line-clamp-1">{h.title}</span>

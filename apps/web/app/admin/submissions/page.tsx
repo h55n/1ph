@@ -6,12 +6,13 @@ import { prisma } from '@/lib/db'
 export default async function AdminSubmissionsPage({
   searchParams,
 }: {
-  searchParams: { status?: string }
+  searchParams: Promise<{ status?: string }>
 }) {
+  const params = await searchParams
   const session = await getServerSession(authOptions)
   if ((session?.user as { role?: string })?.role !== 'ADMIN') redirect('/')
 
-  const statusFilter = searchParams.status ?? 'PENDING'
+  const statusFilter = params.status ?? 'PENDING'
 
   const submissions = await prisma.organizerSubmission.findMany({
     where: statusFilter === 'all' ? {} : { status: statusFilter as 'PENDING' | 'APPROVED' | 'REJECTED' },
@@ -62,7 +63,7 @@ export default async function AdminSubmissionsPage({
                   No submissions with status: {statusFilter}
                 </td>
               </tr>
-            ) : submissions.map(sub => (
+            ) : submissions.map((sub: any) => (
               <tr key={sub.id} className="border-b border-border last:border-0 hover:bg-tag-bg transition-colors">
                 <td className="px-4 py-3 text-text-primary max-w-[200px] truncate">{sub.hackathonTitle}</td>
                 <td className="px-4 py-3 text-text-muted max-w-[140px] truncate">{sub.orgName}</td>

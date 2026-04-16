@@ -12,7 +12,7 @@ export default async function sitemap() {
     { url: 'https://1ph.dev/submit', lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.3 },
   ]
 
-  const hackathonPages = hackathons.map(h => ({
+  const hackathonPages = hackathons.map((h: any) => ({
     url: `https://1ph.dev/hackathon/${h.slug}`,
     lastModified: h.updatedAt,
     changeFrequency: 'daily' as const,

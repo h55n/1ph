@@ -120,7 +120,7 @@ Set all env vars in Vercel dashboard.
   - `PIPELINE_WEBHOOK_SECRET`
   - `PORT` (optional; Railway injects this automatically)
 - Set GitHub repo secrets:
-  - `PIPELINE_WEBHOOK_URL=https://pipeline-production-db4b.up.railway.app/trigger`
+  - `PIPELINE_WEBHOOK_URL=https://pipeline-production-db4b.up.railway.app/trigger` (current production URL; use your Railway service URL in other environments)
   - `PIPELINE_WEBHOOK_SECRET` (must match Railway exactly)
 - Railway auto-deploys on push to main
 
@@ -135,7 +135,7 @@ Set all env vars in Vercel dashboard.
 - Confirm Railway logs show queued connector jobs and worker execution
 
 **If Railway build fails, use the final error line:**
-- `Cannot find module '@prisma/client'` → confirm root directory is `apps/pipeline` and build command is `npm run build`
+- `Cannot find module '@prisma/client'` → confirm root directory is `apps/pipeline` and build command is `npm run build` (this build script runs `prisma generate` before `tsc`)
 - `Prisma schema not found` → confirm service is building from `apps/pipeline` (schema path is relative to that directory)
 - `tsc` errors → fix TypeScript errors in the file reported by the final log lines
 - Puppeteer/Chromium install errors → keep Railway default apt packages, then redeploy cleanly

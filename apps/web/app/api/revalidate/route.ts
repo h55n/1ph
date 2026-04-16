@@ -3,11 +3,12 @@ import { NextResponse } from 'next/server'
 import { timingSafeEqual } from 'node:crypto'
 
 function isAuthorized(authorizationHeader: string, secret: string): boolean {
-  if (!authorizationHeader.startsWith('Bearer ')) {
+  const normalizedHeader = authorizationHeader.trim()
+  if (!normalizedHeader.startsWith('Bearer ')) {
     return false
   }
 
-  const token = authorizationHeader.slice('Bearer '.length)
+  const token = normalizedHeader.slice('Bearer '.length).trim()
   const tokenBuffer = Buffer.from(token)
   const secretBuffer = Buffer.from(secret)
 
@@ -22,7 +23,12 @@ export async function POST(request: Request) {
   const authHeader = request.headers.get('authorization') ?? ''
   const secret = process.env.REVALIDATE_SECRET
 
-  if (!secret || !isAuthorized(authHeader, secret)) {
+  if (!secret) {
+    console.error('REVALIDATE_SECRET is not configured')
+    return NextResponse.json({ revalidated: false, error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!isAuthorized(authHeader, secret)) {
     return NextResponse.json({ revalidated: false, error: 'Unauthorized' }, { status: 401 })
   }
 

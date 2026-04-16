@@ -59,7 +59,7 @@ chmod +x scripts/setup.sh && ./scripts/setup.sh
 ## Key Concepts
 
 - **No in-platform applications.** Every hackathon redirects to the source to apply.
-- **Two services.** Frontend (Vercel) and pipeline (Railway) are completely separate.
+- **Two runtimes.** Frontend runs on Vercel; pipeline runs as a scheduled/manual GitHub Actions workflow.
 - **Quality gate.** Every hackathon passes validation before entering the DB.
 - **Prestige tiers.** T1 = elite (Google, IIT nationals, etc). T2 = established. T3 = community.
 - **Closed tab.** Expired hackathons stay for historical reference, hidden from default view.

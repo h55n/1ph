@@ -8,7 +8,7 @@ Two independent services:
 ┌─────────────────────┐         ┌──────────────────────┐
 │   apps/web          │         │   apps/pipeline       │
 │   Next.js 14        │         │   Node.js + BullMQ    │
-│   Vercel            │         │   Railway             │
+│   Vercel            │         │   GitHub Actions      │
 │                     │         │                       │
 │  /                  │  reads  │  Devpost connector    │
 │  /hackathon/[slug]  │ ──────> │  Devfolio connector   │
@@ -34,10 +34,9 @@ Two independent services:
 ## Data Flow
 
 ```
-GitHub Actions (daily 02:00 UTC)
-  → POST /pipeline/trigger (Railway webhook)
-  → BullMQ: enqueue one job per source
-  → Each worker: fetch → normalize → quality gate → tier assign → upsert
+GitHub Actions (daily 02:00 UTC or manual)
+  → Run one-off pipeline script
+  → Each source: fetch → normalize → quality gate → tier assign → upsert
   → Status sweep: recalculate all statuses
   → Log pipeline_run record
 ```
@@ -104,7 +103,7 @@ passes quality gate?                 → T3
 | Decision | Choice | Reason |
 |----------|--------|--------|
 | Monorepo | Turborepo | Shared Prisma schema between web + pipeline |
-| Pipeline isolation | Separate Railway service | Pipeline can't run in serverless Vercel functions (Puppeteer, long-running jobs) |
+| Pipeline isolation | Separate GitHub Actions workflow | Pipeline can't run in serverless Vercel functions (Puppeteer, long-running jobs) |
 | Auth provider | NextAuth.js | Fastest path to Google + GitHub OAuth |
 | Search v1 | Postgres FTS | Zero infra cost, sufficient for 5K records |
 | OG images | @vercel/og | Edge-generated, no external service |

@@ -5,7 +5,7 @@ import { PrestigeBadge } from '@/components/PrestigeBadge'
 import { StatusChip } from '@/components/StatusChip'
 import { formatDeadline, formatPrize, formatFee } from '@/lib/formatters'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 export async function generateMetadata({
   params,

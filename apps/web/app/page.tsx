@@ -64,19 +64,20 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<any> }) {
   }
   const orderBy = SORT_MAP[sort ?? 'prestige'] ?? SORT_MAP.prestige
 
-  const hackathons = await prisma.hackathon.findMany({
-    where,
-    orderBy,
-    take: 60,
-    select: {
-      slug: true, title: true, organizerName: true, organizerLogoUrl: true,
-      prestigeTier: true, status: true, prizePool: true, prizeCurrency: true,
-      prizeDescription: true, entryFee: true, entryFeeCurrency: true,
-      registrationClose: true, mode: true, themeTags: true, scope: true,
-    },
-  })
-
-  const total = await prisma.hackathon.count({ where })
+  const [hackathons, total] = await Promise.all([
+    prisma.hackathon.findMany({
+      where,
+      orderBy,
+      take: 60,
+      select: {
+        slug: true, title: true, organizerName: true, organizerLogoUrl: true,
+        prestigeTier: true, status: true, prizePool: true, prizeCurrency: true,
+        prizeDescription: true, entryFee: true, entryFeeCurrency: true,
+        registrationClose: true, mode: true, themeTags: true, scope: true,
+      },
+    }),
+    prisma.hackathon.count({ where }),
+  ]).catch(() => [[], 0] as const)
 
   if (hackathons.length === 0) {
     return (

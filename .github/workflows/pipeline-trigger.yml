@@ -32,3 +32,18 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npx ts-node apps/pipeline/scheduler/run-once.ts
+
+      - name: Revalidate website cache
+        env:
+          WEB_REVALIDATE_URL: ${{ secrets.WEB_REVALIDATE_URL }}
+          WEB_REVALIDATE_SECRET: ${{ secrets.WEB_REVALIDATE_SECRET }}
+        run: |
+          if [ -z "$WEB_REVALIDATE_URL" ] || [ -z "$WEB_REVALIDATE_SECRET" ]; then
+            echo "Skipping website revalidation: WEB_REVALIDATE_URL or WEB_REVALIDATE_SECRET not configured."
+            exit 0
+          fi
+
+          curl --fail-with-body --show-error --silent \
+            -X POST "$WEB_REVALIDATE_URL" \
+            -H "Authorization: Bearer $WEB_REVALIDATE_SECRET" \
+            -H "Content-Type: application/json"

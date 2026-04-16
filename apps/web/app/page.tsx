@@ -10,7 +10,7 @@ import type { Prisma } from '@prisma/client'
 export const revalidate = 3600 // ISR: revalidate every hour
 
 interface PageProps {
-  searchParams: {
+  searchParams: Promise<{
     scope?: string
     q?: string
     theme?: string
@@ -21,11 +21,11 @@ interface PageProps {
     duration?: string
     sort?: string
     status?: string
-  }
+  }>
 }
 
-async function HackathonGrid({ searchParams }: PageProps) {
-  const { scope, q, theme, mode, fee, team, eligibility, duration, sort, status } = searchParams
+async function HackathonGrid({ searchParams }: { searchParams: Promise<any> }) {
+  const { scope, q, theme, mode, fee, team, eligibility, duration, sort, status } = await searchParams
 
   // Build Prisma where clause
   const where: Prisma.HackathonWhereInput = {}
@@ -110,8 +110,9 @@ async function HackathonGrid({ searchParams }: PageProps) {
   )
 }
 
-export default function HomePage({ searchParams }: PageProps) {
-  const isClosedView = searchParams.status === 'CLOSED'
+export default async function HomePage({ searchParams }: PageProps) {
+  const { status } = await searchParams
+  const isClosedView = status === 'CLOSED'
 
   return (
     <div className="space-y-6">

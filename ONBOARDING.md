@@ -120,12 +120,12 @@ Set all env vars in Vercel dashboard.
   - `PIPELINE_WEBHOOK_SECRET`
   - `PORT` (optional; Railway injects this automatically)
 - Set GitHub repo secrets:
-  - `PIPELINE_WEBHOOK_URL=https://pipeline-production-db4b.up.railway.app/trigger` (current production URL; use your Railway service URL in other environments)
+  - `PIPELINE_WEBHOOK_URL=https://your-service-name.up.railway.app/trigger`
   - `PIPELINE_WEBHOOK_SECRET` (must match Railway exactly)
 - Railway auto-deploys on push to main
 
 **Post-deploy validation:**
-- Health: `GET https://your-service-name.up.railway.app/health` (current prod: `https://pipeline-production-db4b.up.railway.app/health`)
+- Health: `GET https://your-service-name.up.railway.app/health`
 - Trigger:
   ```bash
   curl -X POST "https://your-service-name.up.railway.app/trigger" \

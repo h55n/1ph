@@ -64,7 +64,7 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<any> }) {
   }
   const orderBy = SORT_MAP[sort ?? 'prestige'] ?? SORT_MAP.prestige
 
-  const [hackathonsResult, totalResult] = await Promise.allSettled([
+  const [hackathonsSettled, totalSettled] = await Promise.allSettled([
     prisma.hackathon.findMany({
       where,
       orderBy,
@@ -79,15 +79,15 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<any> }) {
     prisma.hackathon.count({ where }),
   ])
 
-  const hackathons = hackathonsResult.status === 'fulfilled' ? hackathonsResult.value : []
-  const total = totalResult.status === 'fulfilled' ? totalResult.value : 0
-  const isDataUnavailable = hackathonsResult.status === 'rejected' && totalResult.status === 'rejected'
+  const hackathons = hackathonsSettled.status === 'fulfilled' ? hackathonsSettled.value : []
+  const total = totalSettled.status === 'fulfilled' ? totalSettled.value : 0
+  const isDataUnavailable = hackathonsSettled.status === 'rejected' && totalSettled.status === 'rejected'
 
-  if (hackathonsResult.status === 'rejected') {
-    console.error('Failed to query hackathons for homepage:', hackathonsResult.reason)
+  if (hackathonsSettled.status === 'rejected') {
+    console.error('Failed to query hackathons for homepage:', hackathonsSettled.reason)
   }
-  if (totalResult.status === 'rejected') {
-    console.error('Failed to query total hackathon count for homepage:', totalResult.reason)
+  if (totalSettled.status === 'rejected') {
+    console.error('Failed to query total hackathon count for homepage:', totalSettled.reason)
   }
 
   if (isDataUnavailable) {

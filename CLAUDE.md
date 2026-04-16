@@ -4,7 +4,7 @@ Re-read this file at the start of every session.
 
 ## Project
 1ph — One Place for Hackathons. Clean, minimal hackathon directory.
-Two services: apps/web (Next.js, Vercel) + apps/pipeline (Node.js, Railway).
+Two runtimes: apps/web (Next.js, Vercel) + apps/pipeline (Node.js run via GitHub Actions).
 
 ## Stack (frozen)
 Next.js 14 App Router · Tailwind CSS · Supabase/PostgreSQL · Prisma · NextAuth.js

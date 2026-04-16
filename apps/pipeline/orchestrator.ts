@@ -1,14 +1,39 @@
 // apps/pipeline/orchestrator.ts
 // Main pipeline runner — called by scheduler for each source
 
-import { PrismaClient } from '@prisma/client'
 import type { IConnector } from './connectors/base'
 import { normalize } from './normalizer/index'
 import { runQualityGate } from './quality-gate/index'
 import { assignTier } from './tier-engine/index'
 import { logPipelineRun } from './logger/pipeline-run'
+import { prisma } from './lib/prisma'
+import { Source } from '@prisma/client'
 
-const prisma = new PrismaClient()
+const MAX_SLUG_COLLISION_ATTEMPTS = 100
+
+function parseSource(source: string): Source | null {
+  return Object.values(Source).includes(source as Source) ? (source as Source) : null
+}
+
+// Resolve slug collisions by appending numeric suffixes, then a deterministic hash fallback
+// if MAX_SLUG_COLLISION_ATTEMPTS is exhausted.
+async function makeUniqueSlug(baseSlug: string): Promise<string> {
+  let slug = baseSlug
+  let attempt = 0
+
+  while (attempt < MAX_SLUG_COLLISION_ATTEMPTS) {
+    const existing = await prisma.hackathon.findUnique({
+      where: { slug },
+      select: { id: true },
+    })
+    if (!existing) return slug
+    attempt++
+    slug = `${baseSlug}-${attempt}`
+  }
+
+  const deterministicSuffix = Buffer.from(baseSlug).toString('hex').slice(-8)
+  return `${baseSlug}-${deterministicSuffix}`
+}
 
 export async function runConnector(connector: IConnector): Promise<void> {
   console.log(`[${connector.source}] Starting...`)
@@ -18,6 +43,10 @@ export async function runConnector(connector: IConnector): Promise<void> {
   let updatedCount = 0
   const closedCount = 0
   const errors: string[] = []
+  const source = parseSource(connector.source)
+  if (!source) {
+    throw new Error(`Invalid connector source enum: ${connector.source}`)
+  }
 
   try {
     const result = await connector.fetch()
@@ -57,13 +86,10 @@ export async function runConnector(connector: IConnector): Promise<void> {
         else if (normalized.registrationClose <= sevenDays) status = 'CLOSING_SOON'
         else if (normalized.registrationOpen && normalized.registrationOpen > now) status = 'UPCOMING'
 
-        // Upsert
-        const existing = await prisma.hackathon.findFirst({
+        // Update existing source record when present
+        const existing = await prisma.hackathon.findUnique({
           where: {
-            OR: [
-              { source: connector.source as any, sourceId: normalized.sourceId },
-              { slug: normalized.slug },
-            ],
+            source_sourceId: { source, sourceId: normalized.sourceId },
           },
           select: { id: true },
         })
@@ -104,10 +130,11 @@ export async function runConnector(connector: IConnector): Promise<void> {
           })
           updatedCount++
         } else {
+          const slug = await makeUniqueSlug(normalized.slug)
           await prisma.hackathon.create({
             data: {
               title: normalized.title,
-              slug: normalized.slug,
+              slug,
               organizerName: normalized.organizerName,
               organizerLogoUrl: normalized.organizerLogoUrl,
               description: normalized.description,
@@ -128,7 +155,7 @@ export async function runConnector(connector: IConnector): Promise<void> {
               eventStart: normalized.eventStart,
               eventEnd: normalized.eventEnd,
               applyUrl: normalized.applyUrl,
-              source: connector.source as any,
+               source,
               sourceId: normalized.sourceId,
               scope: normalized.scope as any,
               indiaRegion: normalized.indiaRegion,
@@ -168,7 +195,5 @@ export async function runConnector(connector: IConnector): Promise<void> {
       closedCount: 0,
       errorLog: String(err),
     })
-  } finally {
-    await prisma.$disconnect()
   }
 }

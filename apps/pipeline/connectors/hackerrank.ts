@@ -4,6 +4,8 @@
 
 import type { IConnector, ConnectorResult, RawHackathon } from './base'
 
+const HACKATHON_KEYWORDS_PATTERN = /(hack|build|code|coding|contest|challenge|sprint|codesprint|codestorm)/
+
 export class HackerRankConnector implements IConnector {
   source = 'HACKERRANK'
 
@@ -15,6 +17,7 @@ export class HackerRankConnector implements IConnector {
       // Dynamic import to avoid loading puppeteer unless needed
       const puppeteer = await import('puppeteer')
       const browser = await puppeteer.default.launch({
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
       })
@@ -47,8 +50,8 @@ export class HackerRankConnector implements IConnector {
 
       for (const item of data) {
         if (!item.title || !item.link) continue
-        // Filter to hackathon-type only
-        if (!item.title.toLowerCase().includes('hack') && !item.description.toLowerCase().includes('build')) continue
+        const text = `${item.title} ${item.description ?? ''}`.toLowerCase()
+        if (!HACKATHON_KEYWORDS_PATTERN.test(text)) continue
 
         records.push({
           sourceId: `hr-${item.link.split('/').filter(Boolean).pop() ?? Buffer.from(item.title).toString('base64').slice(0,12)}`,

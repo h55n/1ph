@@ -39,7 +39,7 @@ jobs:
           WEB_REVALIDATE_SECRET: ${{ secrets.WEB_REVALIDATE_SECRET }}
         run: |
           if [ -z "$WEB_REVALIDATE_URL" ] || [ -z "$WEB_REVALIDATE_SECRET" ]; then
-            echo "Skipping website revalidation: WEB_REVALIDATE_URL/WEB_REVALIDATE_SECRET not configured."
+            echo "Skipping website revalidation: WEB_REVALIDATE_URL or WEB_REVALIDATE_SECRET not configured."
             exit 0
           fi
 

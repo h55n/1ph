@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
   if (!secret) {
     console.error('REVALIDATE_SECRET is not configured')
-    return NextResponse.json({ revalidated: false, error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ revalidated: false, error: 'Internal Server Error' }, { status: 500 })
   }
 
   if (!isAuthorized(authHeader, secret)) {

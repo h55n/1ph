@@ -125,10 +125,10 @@ Set all env vars in Vercel dashboard.
 - Railway auto-deploys on push to main
 
 **Post-deploy validation:**
-- Health: `GET https://pipeline-production-db4b.up.railway.app/health`
+- Health: `GET https://your-service-name.up.railway.app/health` (current prod: `https://pipeline-production-db4b.up.railway.app/health`)
 - Trigger:
   ```bash
-  curl -X POST "https://pipeline-production-db4b.up.railway.app/trigger" \
+  curl -X POST "https://your-service-name.up.railway.app/trigger" \
     -H "Authorization: Bearer <PIPELINE_WEBHOOK_SECRET>" \
     -H "Content-Type: application/json"
   ```

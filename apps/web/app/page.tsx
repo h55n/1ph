@@ -64,7 +64,7 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<any> }) {
   }
   const orderBy = SORT_MAP[sort ?? 'prestige'] ?? SORT_MAP.prestige
 
-  const [hackathons, total] = await Promise.all([
+  const result = await Promise.all([
     prisma.hackathon.findMany({
       where,
       orderBy,
@@ -79,8 +79,9 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<any> }) {
     prisma.hackathon.count({ where }),
   ]).catch((error) => {
     console.error('Failed to query hackathons for homepage:', error)
-    return [[], 0] as const
+    return null
   })
+  const [hackathons, total] = result ?? [[], 0]
 
   if (hackathons.length === 0) {
     return (

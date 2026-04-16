@@ -17,7 +17,7 @@ export default async function sitemap() {
       return []
     })
 
-  const hackathonPages = hackathons.map((h: any) => ({
+  const hackathonPages = hackathons.map((h) => ({
     url: `https://1ph.dev/hackathon/${h.slug}`,
     lastModified: h.updatedAt,
     changeFrequency: 'daily' as const,

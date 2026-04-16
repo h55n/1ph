@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "ts-node scheduler/cron.ts",
-    "build": "npx prisma generate --schema ../../packages/db/schema.prisma && tsc",
+    "build": "SCHEMA_PATH=../../packages/db/schema.prisma; if [ ! -f \"$SCHEMA_PATH\" ]; then SCHEMA_PATH=../packages/db/schema.prisma; fi; npx prisma generate --schema \"$SCHEMA_PATH\" && tsc",
     "start": "node dist/scheduler/cron.js",
     "typecheck": "tsc --noEmit"
   },

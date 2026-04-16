@@ -51,7 +51,7 @@ export default async function HackathonDetailPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const h = await prisma.hackathon.findUnique({ where: { slug: slug } }).catch(() => null)
+  const h = await prisma.hackathon.findUnique({ where: { slug: slug } })
   if (!h) notFound()
 
   const isClosed = h.status === 'CLOSED'

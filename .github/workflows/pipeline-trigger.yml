@@ -1,0 +1,26 @@
+name: Daily Pipeline Trigger
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # 02:00 UTC daily
+  workflow_dispatch:        # allow manual trigger from GitHub Actions UI
+
+jobs:
+  trigger-pipeline:
+    name: Trigger Pipeline Run
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger 1ph pipeline
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ secrets.PIPELINE_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.PIPELINE_WEBHOOK_SECRET }}" \
+            -H "Content-Type: application/json")
+          
+          if [ "$RESPONSE" != "200" ]; then
+            echo "❌ Pipeline trigger failed with status: $RESPONSE"
+            exit 1
+          fi
+          
+          echo "✅ Pipeline triggered successfully"

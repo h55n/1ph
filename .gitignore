@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+apps/web/.next/
+apps/web/out/
+
+# Pipeline build
+apps/pipeline/dist/
+
+# Prisma generated client
+packages/db/node_modules/
+
+# Environment files — NEVER COMMIT
+.env
+.env.local
+.env.*.local
+apps/web/.env.local
+apps/pipeline/.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Turbo cache
+.turbo/

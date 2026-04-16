@@ -11,7 +11,7 @@ export async function generateStaticParams() {
       select: { slug: true },
       where: { status: { not: 'CLOSED' } },
     })
-    return hackathons.map(h => ({ slug: h.slug }))
+    return hackathons.map((hackathon) => ({ slug: hackathon.slug }))
   } catch (error) {
     console.error('Failed to generate static hackathon params:', error)
     return []

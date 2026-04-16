@@ -81,12 +81,22 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<any> }) {
 
   const hackathons = hackathonsResult.status === 'fulfilled' ? hackathonsResult.value : []
   const total = totalResult.status === 'fulfilled' ? totalResult.value : 0
+  const isDataUnavailable = hackathonsResult.status === 'rejected' && totalResult.status === 'rejected'
 
   if (hackathonsResult.status === 'rejected') {
     console.error('Failed to query hackathons for homepage:', hackathonsResult.reason)
   }
   if (totalResult.status === 'rejected') {
     console.error('Failed to query total hackathon count for homepage:', totalResult.reason)
+  }
+
+  if (isDataUnavailable) {
+    return (
+      <div className="text-center py-20">
+        <p className="font-serif text-2xl text-text-muted mb-2">Hackathons are temporarily unavailable.</p>
+        <p className="text-sm font-mono text-text-muted">Please try again shortly.</p>
+      </div>
+    )
   }
 
   if (hackathons.length === 0) {

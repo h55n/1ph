@@ -12,6 +12,7 @@ jobs:
   run-pipeline:
     name: Run Pipeline
     runs-on: ubuntu-latest
+    timeout-minutes: 90
 
     steps:
       - uses: actions/checkout@v4
@@ -24,6 +25,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: true
+
+      - id: setup-chrome
+        name: Install Chrome
+        uses: browser-actions/setup-chrome@v1
 
       - name: Generate Prisma client
         run: npx prisma generate --schema packages/db/schema.prisma
@@ -31,6 +38,7 @@ jobs:
       - name: Run pipeline
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PUPPETEER_EXECUTABLE_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
         run: npx ts-node apps/pipeline/scheduler/run-once.ts
 
       - name: Revalidate website cache

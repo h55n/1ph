@@ -10,7 +10,6 @@ const KEYWORD_BLOCKLIST = [
 
 const COLLEGE_KEYWORDS = [
   'college', 'university', 'student club', 'coding club',
-  'technical fest', 'techfest', 'symposium',
 ]
 
 export interface QualityResult {
@@ -45,11 +44,16 @@ export async function runQualityGate(record: RawHackathon): Promise<QualityResul
     return { pass: false, reason: 'College hackathon without named sponsor' }
   }
 
-  // 5. URL health check (with timeout — don't block pipeline)
+  // 5. Optional URL health check (disabled in ingestion by default)
+  if (process.env.QUALITY_GATE_CHECK_URL !== 'true') {
+    return { pass: true }
+  }
+
   try {
+    // Tight limits keep ingestion moving; richer URL validation belongs in periodic sweep jobs.
     const response = await axios.head(record.applyUrl, {
-      timeout: 8000,
-      maxRedirects: 3,
+      timeout: 2500,
+      maxRedirects: 2,
       validateStatus: s => s < 500,
     })
     if (response.status >= 400) {

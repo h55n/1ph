@@ -2,6 +2,10 @@
 import type { RawHackathon } from '../connectors/base'
 import { generateSlug } from './slug'
 
+// Lightweight heuristic for connectors that omit explicit scope:
+// country signals + India-first platforms + common Indian institution markers.
+const INDIA_SCOPE_KEYWORDS_REGEX = /(india|indian|iit|nit|iiit|unstop\.com|hack2skill|devfolio)/
+
 export interface NormalizedHackathon {
   title: string
   slug: string
@@ -30,6 +34,28 @@ export interface NormalizedHackathon {
   scope: 'GLOBAL' | 'INDIA'
   indiaRegion?: string
   sponsors: string[]
+}
+
+function inferScope(raw: RawHackathon): 'GLOBAL' | 'INDIA' {
+  // If connectors provide scope explicitly, trust it.
+  // Otherwise infer from India-region metadata and common India-focused text markers.
+  if (raw.scope) return raw.scope
+  if (raw.indiaRegion?.trim()) return 'INDIA'
+
+  const indiaSignals = [
+    raw.organizerName,
+    raw.title,
+    raw.description,
+    raw.longDescription,
+    raw.applyUrl,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  return INDIA_SCOPE_KEYWORDS_REGEX.test(indiaSignals)
+    ? 'INDIA'
+    : 'GLOBAL'
 }
 
 export function normalize(raw: RawHackathon, source: string): NormalizedHackathon | null {
@@ -65,7 +91,7 @@ export function normalize(raw: RawHackathon, source: string): NormalizedHackatho
       applyUrl: raw.applyUrl,
       source,
       sourceId: raw.sourceId,
-      scope: raw.scope ?? 'GLOBAL',
+      scope: inferScope(raw),
       indiaRegion: raw.indiaRegion,
       sponsors: raw.sponsors ?? [],
     }

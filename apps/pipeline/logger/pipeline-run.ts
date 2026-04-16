@@ -1,7 +1,5 @@
 // apps/pipeline/logger/pipeline-run.ts
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '../lib/prisma'
 
 export async function logPipelineRun(opts: {
   source: string

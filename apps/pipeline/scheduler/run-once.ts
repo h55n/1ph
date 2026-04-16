@@ -7,12 +7,12 @@ import { HackerEarthConnector } from '../connectors/hackerearth'
 import { DevfolioConnector } from '../connectors/devfolio'
 import { StartupIndiaConnector } from '../connectors/startup-india'
 import { Hack2SkillConnector } from '../connectors/hack2skill'
-import { ToplangConnector } from '../connectors/toplang'
 import { HackerRankConnector } from '../connectors/hackerrank'
 import { DevpostConnector } from '../connectors/devpost'
 import { UnstopConnector } from '../connectors/unstop'
 import { runConnector } from '../orchestrator'
 import { runStatusSweep } from '../status-sweep/index'
+import { prisma } from '../lib/prisma'
 
 const CONNECTORS = [
   new MLHConnector(),
@@ -21,7 +21,6 @@ const CONNECTORS = [
   new DevfolioConnector(),
   new StartupIndiaConnector(),
   new Hack2SkillConnector(),
-  new ToplangConnector(),
   new HackerRankConnector(),
   new DevpostConnector(),
   new UnstopConnector(),
@@ -33,7 +32,12 @@ async function run(): Promise<void> {
   console.log('[PIPELINE] Starting GitHub Actions run...')
 
   for (let connectorIndex = 0; connectorIndex < CONNECTORS.length; connectorIndex++) {
-    await runConnector(CONNECTORS[connectorIndex])
+    const connector = CONNECTORS[connectorIndex]
+    try {
+      await runConnector(connector)
+    } catch (err) {
+      console.error(`[${connector.source}] Unhandled fatal error:`, err)
+    }
     if (connectorIndex < CONNECTORS.length - 1) {
       await sleep(10000)
     }
@@ -43,9 +47,12 @@ async function run(): Promise<void> {
   const sweep = await runStatusSweep()
   console.log('[STATUS SWEEP] Done:', sweep)
   console.log('[PIPELINE] Completed GitHub Actions run')
+  await prisma.$disconnect()
+  process.exit(0)
 }
 
 run().catch(err => {
   console.error('[PIPELINE] Fatal error in one-off run:', err)
+  prisma.$disconnect().catch(() => {})
   process.exit(1)
 })

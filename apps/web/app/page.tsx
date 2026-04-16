@@ -64,19 +64,40 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<any> }) {
   }
   const orderBy = SORT_MAP[sort ?? 'prestige'] ?? SORT_MAP.prestige
 
-  const hackathons = await prisma.hackathon.findMany({
-    where,
-    orderBy,
-    take: 60,
-    select: {
-      slug: true, title: true, organizerName: true, organizerLogoUrl: true,
-      prestigeTier: true, status: true, prizePool: true, prizeCurrency: true,
-      prizeDescription: true, entryFee: true, entryFeeCurrency: true,
-      registrationClose: true, mode: true, themeTags: true, scope: true,
-    },
-  })
+  const [hackathonsSettled, totalSettled] = await Promise.allSettled([
+    prisma.hackathon.findMany({
+      where,
+      orderBy,
+      take: 60,
+      select: {
+        slug: true, title: true, organizerName: true, organizerLogoUrl: true,
+        prestigeTier: true, status: true, prizePool: true, prizeCurrency: true,
+        prizeDescription: true, entryFee: true, entryFeeCurrency: true,
+        registrationClose: true, mode: true, themeTags: true, scope: true,
+      },
+    }),
+    prisma.hackathon.count({ where }),
+  ])
 
-  const total = await prisma.hackathon.count({ where })
+  const hackathons = hackathonsSettled.status === 'fulfilled' ? hackathonsSettled.value : []
+  const total = totalSettled.status === 'fulfilled' ? totalSettled.value : 0
+  const isDataUnavailable = hackathonsSettled.status === 'rejected' && totalSettled.status === 'rejected'
+
+  if (hackathonsSettled.status === 'rejected') {
+    console.error('Failed to query hackathons for homepage:', hackathonsSettled.reason)
+  }
+  if (totalSettled.status === 'rejected') {
+    console.error('Failed to query total hackathon count for homepage:', totalSettled.reason)
+  }
+
+  if (isDataUnavailable) {
+    return (
+      <div className="text-center py-20">
+        <p className="font-serif text-2xl text-text-muted mb-2">Hackathons are temporarily unavailable.</p>
+        <p className="text-sm font-mono text-text-muted">Please try again shortly.</p>
+      </div>
+    )
+  }
 
   if (hackathons.length === 0) {
     return (

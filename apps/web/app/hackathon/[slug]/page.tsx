@@ -6,11 +6,16 @@ import { StatusChip } from '@/components/StatusChip'
 import { formatDeadline, formatPrize, formatFee } from '@/lib/formatters'
 
 export async function generateStaticParams() {
-  const hackathons = await prisma.hackathon.findMany({
-    select: { slug: true },
-    where: { status: { not: 'CLOSED' } },
-  })
-  return hackathons.map(h => ({ slug: h.slug }))
+  try {
+    const hackathons = await prisma.hackathon.findMany({
+      select: { slug: true },
+      where: { status: { not: 'CLOSED' } },
+    })
+    return hackathons.map((item) => ({ slug: item.slug }))
+  } catch (error) {
+    console.error('Failed to generate static hackathon params:', error)
+    return []
+  }
 }
 
 export async function generateMetadata({
@@ -19,10 +24,15 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>
 }): Promise<Metadata> {
   const { slug } = await params
-  const h = await prisma.hackathon.findUnique({
-    where: { slug: slug },
-    select: { title: true, description: true, organizerName: true },
-  })
+  const h = await prisma.hackathon
+    .findUnique({
+      where: { slug: slug },
+      select: { title: true, description: true, organizerName: true },
+    })
+    .catch((error) => {
+      console.error(`Failed to generate metadata for hackathon slug "${slug}":`, error)
+      return null
+    })
   if (!h) return {}
   return {
     title: `${h.title} — ${h.organizerName} | 1ph`,

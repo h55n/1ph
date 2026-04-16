@@ -32,9 +32,9 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 async function run(): Promise<void> {
   console.log('[PIPELINE] Starting GitHub Actions run...')
 
-  for (let i = 0; i < CONNECTORS.length; i++) {
-    await runConnector(CONNECTORS[i])
-    if (i < CONNECTORS.length - 1) {
+  for (let connectorIndex = 0; connectorIndex < CONNECTORS.length; connectorIndex++) {
+    await runConnector(CONNECTORS[connectorIndex])
+    if (connectorIndex < CONNECTORS.length - 1) {
       await sleep(10000)
     }
   }

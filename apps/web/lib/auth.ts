@@ -2,6 +2,7 @@ import { NextAuthOptions } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 import GitHubProvider from 'next-auth/providers/github'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
+import type { JWT } from 'next-auth/jwt'
 import { prisma } from './db'
 
 export const authOptions: NextAuthOptions = {
@@ -18,15 +19,18 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
+      const typedToken = token as JWT & { role?: string }
       if (user) {
-        ;(token as any).role = (user as any).role ?? 'VISITOR'
+        typedToken.role = ((user as { role?: string }).role ?? 'VISITOR')
       }
-      return token
+      return typedToken
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user = { ...session.user, id: token.sub } as any
-        ;(session.user as any).role = (token as any).role ?? 'VISITOR'
+        const typedToken = token as JWT & { role?: string }
+        const sessionUser = session.user as typeof session.user & { id?: string; role?: string }
+        sessionUser.id = typedToken.sub
+        sessionUser.role = typedToken.role ?? 'VISITOR'
       }
       return session
     },

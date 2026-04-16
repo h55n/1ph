@@ -10,8 +10,10 @@ export function generateSlug(title: string, sourceId: string): string {
     .slice(0, 60)
 
   // Append last 6 chars of sourceId for uniqueness
-  const sanitized = sourceId.replace(/[^a-z0-9]/gi, '').toLowerCase()
-  const fallback = Buffer.from(sourceId || title).toString('hex').slice(-6)
+  const sourceSeed = sourceId?.trim() ? sourceId : title
+  const sanitized = sourceSeed.replace(/[^a-z0-9]/gi, '').toLowerCase()
+  // Hex fallback guarantees a deterministic suffix even when source IDs are all symbols/non-Latin.
+  const fallback = Buffer.from(sourceSeed).toString('hex').slice(-6)
   const suffix = (sanitized.slice(-6) || fallback).toLowerCase()
   return suffix ? `${base}-${suffix}` : base
 }

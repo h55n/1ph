@@ -10,21 +10,23 @@ import type { Prisma } from '@prisma/client'
 export const revalidate = 3600 // ISR: revalidate every hour
 
 interface PageProps {
-  searchParams: Promise<{
-    scope?: string
-    q?: string
-    theme?: string
-    mode?: string
-    fee?: string
-    team?: string
-    eligibility?: string
-    duration?: string
-    sort?: string
-    status?: string
-  }>
+  searchParams: Promise<SearchParams>
 }
 
-async function HackathonGrid({ searchParams }: { searchParams: Promise<any> }) {
+interface SearchParams {
+  scope?: string
+  q?: string
+  theme?: string
+  mode?: string
+  fee?: string
+  team?: string
+  eligibility?: string
+  duration?: string
+  sort?: string
+  status?: string
+}
+
+async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const { scope, q, theme, mode, fee, team, eligibility, duration, sort, status } = await searchParams
 
   // Build Prisma where clause

@@ -10,7 +10,6 @@ import { HackerEarthConnector } from '../connectors/hackerearth'
 import { DevfolioConnector } from '../connectors/devfolio'
 import { StartupIndiaConnector } from '../connectors/startup-india'
 import { Hack2SkillConnector } from '../connectors/hack2skill'
-import { ToplangConnector } from '../connectors/toplang'
 import { HackerRankConnector } from '../connectors/hackerrank'
 import { DevpostConnector } from '../connectors/devpost'
 import { UnstopConnector } from '../connectors/unstop'
@@ -32,7 +31,6 @@ const CONNECTORS = [
   new DevfolioConnector(),     // REST (GraphQL-style)
   new StartupIndiaConnector(), // Axios + Cheerio
   new Hack2SkillConnector(),   // Axios + Cheerio
-  new ToplangConnector(),      // Axios + Cheerio
   new HackerRankConnector(),   // Puppeteer
   // High block risk — always last (R1 mitigation)
   new DevpostConnector(),      // Puppeteer ⚠️

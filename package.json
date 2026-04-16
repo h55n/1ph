@@ -16,10 +16,11 @@
     "db:studio": "cd packages/db && npx prisma studio"
   },
   "devDependencies": {
-    "turbo": "^1.13.0",
+    "turbo": "^2.9.6",
     "typescript": "^5.3.0"
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "packageManager": "npm@11.11.0"
 }

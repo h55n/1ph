@@ -1,14 +1,29 @@
 // apps/pipeline/orchestrator.ts
 // Main pipeline runner — called by scheduler for each source
 
-import { PrismaClient } from '@prisma/client'
 import type { IConnector } from './connectors/base'
 import { normalize } from './normalizer/index'
 import { runQualityGate } from './quality-gate/index'
 import { assignTier } from './tier-engine/index'
 import { logPipelineRun } from './logger/pipeline-run'
+import { prisma } from './lib/prisma'
 
-const prisma = new PrismaClient()
+async function makeUniqueSlug(baseSlug: string): Promise<string> {
+  let slug = baseSlug
+  let attempt = 0
+
+  while (attempt < 100) {
+    const existing = await prisma.hackathon.findUnique({
+      where: { slug },
+      select: { id: true },
+    })
+    if (!existing) return slug
+    attempt++
+    slug = `${baseSlug}-${attempt}`
+  }
+
+  return `${baseSlug}-${Date.now()}`
+}
 
 export async function runConnector(connector: IConnector): Promise<void> {
   console.log(`[${connector.source}] Starting...`)
@@ -57,13 +72,10 @@ export async function runConnector(connector: IConnector): Promise<void> {
         else if (normalized.registrationClose <= sevenDays) status = 'CLOSING_SOON'
         else if (normalized.registrationOpen && normalized.registrationOpen > now) status = 'UPCOMING'
 
-        // Upsert
-        const existing = await prisma.hackathon.findFirst({
+        // Update existing source record when present
+        const existing = await prisma.hackathon.findUnique({
           where: {
-            OR: [
-              { source: connector.source as any, sourceId: normalized.sourceId },
-              { slug: normalized.slug },
-            ],
+            source_sourceId: { source: connector.source as any, sourceId: normalized.sourceId },
           },
           select: { id: true },
         })
@@ -104,10 +116,11 @@ export async function runConnector(connector: IConnector): Promise<void> {
           })
           updatedCount++
         } else {
+          const slug = await makeUniqueSlug(normalized.slug)
           await prisma.hackathon.create({
             data: {
               title: normalized.title,
-              slug: normalized.slug,
+              slug,
               organizerName: normalized.organizerName,
               organizerLogoUrl: normalized.organizerLogoUrl,
               description: normalized.description,
@@ -168,7 +181,5 @@ export async function runConnector(connector: IConnector): Promise<void> {
       closedCount: 0,
       errorLog: String(err),
     })
-  } finally {
-    await prisma.$disconnect()
   }
 }

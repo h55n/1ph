@@ -61,6 +61,7 @@ export class UnstopConnector implements IConnector {
 
     try {
       browser = await puppeteer.launch({
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
         headless: true,
         args: [
           '--no-sandbox',

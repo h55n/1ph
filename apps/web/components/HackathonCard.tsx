@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import { PrestigeBadge } from './PrestigeBadge'
 import { StatusChip } from './StatusChip'
@@ -52,10 +53,11 @@ export function HackathonCard({ hackathon, index = 0 }: HackathonCardProps) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2 min-w-0">
           {hackathon.organizerLogoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={hackathon.organizerLogoUrl}
               alt={`${hackathon.organizerName} logo`}
+              width={24}
+              height={24}
               className="w-6 h-6 rounded-sm object-contain flex-shrink-0"
             />
           ) : (

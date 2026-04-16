@@ -11,6 +11,10 @@
 | R5 | Apply URLs go dead post-listing | High | Low | Open |
 | R6 | India regional hackathon gaps | Medium | Medium | Open |
 
+## Infrastructure Notes
+
+- Railway is no longer used for scheduled pipeline execution; GitHub Actions is the active runtime for pipeline jobs.
+
 ## Mitigations
 
 **R1 — Scraper blocking:**

@@ -6,6 +6,20 @@ import { StatusChip } from '@/components/StatusChip'
 import { formatDeadline, formatPrize, formatFee } from '@/lib/formatters'
 
 export const revalidate = 3600
+export const dynamicParams = true
+
+export async function generateStaticParams(): Promise<Array<{ slug: string }>> {
+  const rows = await prisma.hackathon
+    .findMany({
+      where: { status: { in: ['OPEN', 'CLOSING_SOON', 'UPCOMING'] } },
+      select: { slug: true },
+      orderBy: { registrationClose: 'asc' },
+      take: 2000,
+    })
+    .catch(() => [])
+
+  return rows.map(row => ({ slug: row.slug }))
+}
 
 export async function generateMetadata({
   params,

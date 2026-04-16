@@ -44,7 +44,7 @@ export class MLHConnector implements IConnector {
             themeTags: ['Open'],
             scope: 'GLOBAL',
             eligibility: 'STUDENTS',
-            durationType: 'HR36' as 'CUSTOM',
+            durationType: 'CUSTOM',
             organizerLogoUrl: logo,
           })
         } catch (err) {

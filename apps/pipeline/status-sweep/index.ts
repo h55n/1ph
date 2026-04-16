@@ -1,7 +1,5 @@
 // apps/pipeline/status-sweep/index.ts
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '../lib/prisma'
 
 export async function runStatusSweep(): Promise<{
   closed: number
@@ -51,6 +49,7 @@ export async function runStatusSweep(): Promise<{
       registrationClose: { gt: sevenDaysFromNow },
       registrationOpen: { lte: now },
       status: { not: 'CLOSED' },
+      urlHealthFails: { lt: 7 },
     },
     data: { status: 'OPEN' },
   })
@@ -65,8 +64,6 @@ export async function runStatusSweep(): Promise<{
     data: { status: 'CLOSED' },
   })
   urlFlagged = autoClosedResult.count
-
-  await prisma.$disconnect()
 
   return { closed, closingSoon, opened, upcoming, urlFlagged }
 }

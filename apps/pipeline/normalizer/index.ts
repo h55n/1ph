@@ -32,6 +32,26 @@ export interface NormalizedHackathon {
   sponsors: string[]
 }
 
+function inferScope(raw: RawHackathon): 'GLOBAL' | 'INDIA' {
+  if (raw.scope) return raw.scope
+  if (raw.indiaRegion?.trim()) return 'INDIA'
+
+  const indiaSignals = [
+    raw.organizerName,
+    raw.title,
+    raw.description,
+    raw.longDescription,
+    raw.applyUrl,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  return /(india|indian|iit|nit|iiit|unstop\.com|hack2skill|devfolio)/.test(indiaSignals)
+    ? 'INDIA'
+    : 'GLOBAL'
+}
+
 export function normalize(raw: RawHackathon, source: string): NormalizedHackathon | null {
   try {
     const registrationClose = new Date(raw.registrationClose)
@@ -65,7 +85,7 @@ export function normalize(raw: RawHackathon, source: string): NormalizedHackatho
       applyUrl: raw.applyUrl,
       source,
       sourceId: raw.sourceId,
-      scope: raw.scope ?? 'GLOBAL',
+      scope: inferScope(raw),
       indiaRegion: raw.indiaRegion,
       sponsors: raw.sponsors ?? [],
     }

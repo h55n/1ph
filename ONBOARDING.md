@@ -108,10 +108,37 @@ vercel --prod
 Set all env vars in Vercel dashboard.
 
 **Pipeline (Railway):**
-- Connect GitHub repo to Railway
+- Connect GitHub repo to Railway (`h55n/1ph`)
 - Set root directory: `apps/pipeline`
-- Set all env vars in Railway dashboard
+- Set build command: `npm run build`
+- Set start command: `npm run start`
+- Set healthcheck path: `/health`
+- Use Node.js 20.x runtime
+- Set Railway env vars:
+  - `DATABASE_URL`
+  - `REDIS_URL`
+  - `PIPELINE_WEBHOOK_SECRET`
+  - `PORT` (optional; Railway injects this automatically)
+- Set GitHub repo secrets:
+  - `PIPELINE_WEBHOOK_URL=https://pipeline-production-db4b.up.railway.app/trigger`
+  - `PIPELINE_WEBHOOK_SECRET` (must match Railway exactly)
 - Railway auto-deploys on push to main
+
+**Post-deploy validation:**
+- Health: `GET https://pipeline-production-db4b.up.railway.app/health`
+- Trigger:
+  ```bash
+  curl -X POST "https://pipeline-production-db4b.up.railway.app/trigger" \
+    -H "Authorization: Bearer <PIPELINE_WEBHOOK_SECRET>" \
+    -H "Content-Type: application/json"
+  ```
+- Confirm Railway logs show queued connector jobs and worker execution
+
+**If Railway build fails, use the final error line:**
+- `Cannot find module '@prisma/client'` → confirm root directory is `apps/pipeline` and build command is `npm run build`
+- `Prisma schema not found` → confirm service is building from `apps/pipeline` (schema path is relative to that directory)
+- `tsc` errors → fix TypeScript errors in the file reported by the final log lines
+- Puppeteer/Chromium install errors → keep Railway default apt packages, then redeploy cleanly
 
 **GitHub Actions:**
 - Set `PIPELINE_WEBHOOK_URL` secret in GitHub repo settings

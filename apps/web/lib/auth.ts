@@ -17,21 +17,25 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
+    async jwt({ token, user }) {
+      if (user) {
+        ;(token as any).role = (user as any).role ?? 'VISITOR'
+      }
+      return token
+    },
+    async session({ session, token }) {
       if (session.user) {
-        session.user = { ...session.user, id: user.id } as any
-        // Fetch role from DB
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { role: true },
-        })
-        ;(session.user as any).role = dbUser?.role ?? 'VISITOR'
+        session.user = { ...session.user, id: token.sub } as any
+        ;(session.user as any).role = (token as any).role ?? 'VISITOR'
       }
       return session
     },
   },
   pages: {
     signIn: '/login',
+  },
+  session: {
+    strategy: 'jwt',
   },
   secret: process.env.NEXTAUTH_SECRET,
 }

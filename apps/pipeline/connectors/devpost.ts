@@ -45,6 +45,7 @@ export class DevpostConnector implements IConnector {
 
     try {
       browser = await puppeteer.launch({
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
         headless: true,
         args: [
           '--no-sandbox',
@@ -117,8 +118,6 @@ export class DevpostConnector implements IConnector {
             const record = this.normalize(h, pageNum)
             if (record) records.push(record)
           }
-
-          if (scraped.length < 24) break // Last page
 
           pageNum++
           // 2–3s random delay between pages (R1 mitigation)

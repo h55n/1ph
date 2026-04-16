@@ -45,7 +45,7 @@ export interface RawHackathon {
 
 export interface IConnector {
   source: string;
-  fetch(): Promise<RawHackathon[]>;
+  fetch(): Promise<ConnectorResult>;
 }
 ```
 

@@ -77,7 +77,10 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<any> }) {
       },
     }),
     prisma.hackathon.count({ where }),
-  ]).catch(() => [[], 0] as const)
+  ]).catch((error) => {
+    console.error('Failed to query hackathons for homepage:', error)
+    return [[], 0] as const
+  })
 
   if (hackathons.length === 0) {
     return (

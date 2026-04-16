@@ -12,7 +12,8 @@ export async function generateStaticParams() {
       where: { status: { not: 'CLOSED' } },
     })
     return hackathons.map(h => ({ slug: h.slug }))
-  } catch {
+  } catch (error) {
+    console.error('Failed to generate static hackathon params:', error)
     return []
   }
 }
@@ -28,7 +29,10 @@ export async function generateMetadata({
       where: { slug: slug },
       select: { title: true, description: true, organizerName: true },
     })
-    .catch(() => null)
+    .catch((error) => {
+      console.error(`Failed to generate metadata for hackathon slug "${slug}":`, error)
+      return null
+    })
   if (!h) return {}
   return {
     title: `${h.title} — ${h.organizerName} | 1ph`,

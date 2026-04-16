@@ -5,18 +5,7 @@ import { PrestigeBadge } from '@/components/PrestigeBadge'
 import { StatusChip } from '@/components/StatusChip'
 import { formatDeadline, formatPrize, formatFee } from '@/lib/formatters'
 
-export async function generateStaticParams() {
-  try {
-    const hackathons = await prisma.hackathon.findMany({
-      select: { slug: true },
-      where: { status: { not: 'CLOSED' } },
-    })
-    return hackathons.map((item) => ({ slug: item.slug }))
-  } catch (error) {
-    console.error('Failed to generate static hackathon params:', error)
-    return []
-  }
-}
+export const revalidate = 3600
 
 export async function generateMetadata({
   params,

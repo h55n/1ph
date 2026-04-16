@@ -15,6 +15,10 @@ Trade-off: Slightly more complex initial setup vs. simpler shared types.
 Why: Puppeteer and BullMQ workers can't run in Vercel serverless functions (memory limits, 10s timeout). Pipeline needs an always-on Node.js process.
 Trade-off: Two deployments to manage vs. impossibility of running long scrapes in serverless.
 
+**2026-04-16 — Pipeline run moved from Railway webhook to GitHub Actions execution**
+Why: We can execute the pipeline directly in scheduled/manual GitHub Actions runs without maintaining a separate Railway deployment.
+Trade-off: Longer CI-style job runtime and Actions minute usage vs. simpler deployment and fewer moving parts.
+
 **2026-04-14 — Google Form for organizer submissions (v1)**
 Why: Zero build cost, full manual quality control, ships immediately.
 Trade-off: Manual admin work vs. no spam risk and no self-serve portal to build.

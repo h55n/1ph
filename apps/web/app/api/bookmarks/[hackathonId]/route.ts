@@ -15,7 +15,7 @@ export async function DELETE(
 
   try {
     await prisma.bookmark.delete({
-      where: { userId_hackathonId: { userId, hackathonId: params.hackathonId } },
+      where: { userId_hackathonId: { userId, hackathonId } },
     })
     return NextResponse.json({ deleted: true })
   } catch {

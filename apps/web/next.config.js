@@ -5,6 +5,7 @@ const nextConfig = {
       { protocol: 'https', hostname: '**' },
     ],
   },
+  // Kept off to avoid enforcing typed-route constraints across legacy href usage.
   typedRoutes: false,
 }
 

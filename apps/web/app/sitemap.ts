@@ -12,7 +12,10 @@ export default async function sitemap() {
       where: { status: { not: 'CLOSED' } },
       orderBy: { updatedAt: 'desc' },
     })
-    .catch(() => [])
+    .catch((error) => {
+      console.error('Failed to generate sitemap hackathon entries:', error)
+      return []
+    })
 
   const hackathonPages = hackathons.map((h: any) => ({
     url: `https://1ph.dev/hackathon/${h.slug}`,

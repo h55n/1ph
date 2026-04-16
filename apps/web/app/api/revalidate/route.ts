@@ -1,11 +1,28 @@
 import { revalidatePath } from 'next/cache'
 import { NextResponse } from 'next/server'
+import { timingSafeEqual } from 'node:crypto'
+
+function isAuthorized(authorizationHeader: string, secret: string): boolean {
+  if (!authorizationHeader.startsWith('Bearer ')) {
+    return false
+  }
+
+  const token = authorizationHeader.slice('Bearer '.length)
+  const tokenBuffer = Buffer.from(token)
+  const secretBuffer = Buffer.from(secret)
+
+  if (tokenBuffer.length !== secretBuffer.length) {
+    return false
+  }
+
+  return timingSafeEqual(tokenBuffer, secretBuffer)
+}
 
 export async function POST(request: Request) {
   const authHeader = request.headers.get('authorization') ?? ''
-  const token = authHeader.replace('Bearer ', '')
+  const secret = process.env.REVALIDATE_SECRET
 
-  if (!process.env.REVALIDATE_SECRET || token !== process.env.REVALIDATE_SECRET) {
+  if (!secret || !isAuthorized(authHeader, secret)) {
     return NextResponse.json({ revalidated: false, error: 'Unauthorized' }, { status: 401 })
   }
 

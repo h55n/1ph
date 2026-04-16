@@ -50,6 +50,7 @@ export async function runQualityGate(record: RawHackathon): Promise<QualityResul
   }
 
   try {
+    // Tight limits keep ingestion moving; richer URL validation belongs in periodic sweep jobs.
     const response = await axios.head(record.applyUrl, {
       timeout: 2500,
       maxRedirects: 2,

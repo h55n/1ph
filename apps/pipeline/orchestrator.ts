@@ -7,12 +7,21 @@ import { runQualityGate } from './quality-gate/index'
 import { assignTier } from './tier-engine/index'
 import { logPipelineRun } from './logger/pipeline-run'
 import { prisma } from './lib/prisma'
+import { Source } from '@prisma/client'
 
+const MAX_SLUG_COLLISION_ATTEMPTS = 100
+
+function parseSource(source: string): Source | null {
+  return Object.values(Source).includes(source as Source) ? (source as Source) : null
+}
+
+// Resolve slug collisions by appending numeric suffixes, then a deterministic hash fallback
+// if MAX_SLUG_COLLISION_ATTEMPTS is exhausted.
 async function makeUniqueSlug(baseSlug: string): Promise<string> {
   let slug = baseSlug
   let attempt = 0
 
-  while (attempt < 100) {
+  while (attempt < MAX_SLUG_COLLISION_ATTEMPTS) {
     const existing = await prisma.hackathon.findUnique({
       where: { slug },
       select: { id: true },
@@ -22,7 +31,8 @@ async function makeUniqueSlug(baseSlug: string): Promise<string> {
     slug = `${baseSlug}-${attempt}`
   }
 
-  return `${baseSlug}-${Date.now()}`
+  const deterministicSuffix = Buffer.from(baseSlug).toString('hex').slice(-8)
+  return `${baseSlug}-${deterministicSuffix}`
 }
 
 export async function runConnector(connector: IConnector): Promise<void> {
@@ -33,6 +43,10 @@ export async function runConnector(connector: IConnector): Promise<void> {
   let updatedCount = 0
   const closedCount = 0
   const errors: string[] = []
+  const source = parseSource(connector.source)
+  if (!source) {
+    throw new Error(`Invalid connector source enum: ${connector.source}`)
+  }
 
   try {
     const result = await connector.fetch()
@@ -75,7 +89,7 @@ export async function runConnector(connector: IConnector): Promise<void> {
         // Update existing source record when present
         const existing = await prisma.hackathon.findUnique({
           where: {
-            source_sourceId: { source: connector.source as any, sourceId: normalized.sourceId },
+            source_sourceId: { source, sourceId: normalized.sourceId },
           },
           select: { id: true },
         })
@@ -141,7 +155,7 @@ export async function runConnector(connector: IConnector): Promise<void> {
               eventStart: normalized.eventStart,
               eventEnd: normalized.eventEnd,
               applyUrl: normalized.applyUrl,
-              source: connector.source as any,
+               source,
               sourceId: normalized.sourceId,
               scope: normalized.scope as any,
               indiaRegion: normalized.indiaRegion,

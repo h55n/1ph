@@ -4,6 +4,8 @@
 
 import type { IConnector, ConnectorResult, RawHackathon } from './base'
 
+const HACKATHON_KEYWORDS_PATTERN = /(hack|build|code|coding|contest|challenge|sprint|codesprint|codestorm)/
+
 export class HackerRankConnector implements IConnector {
   source = 'HACKERRANK'
 
@@ -48,8 +50,8 @@ export class HackerRankConnector implements IConnector {
 
       for (const item of data) {
         if (!item.title || !item.link) continue
-        const text = `${item.title} ${item.description}`.toLowerCase()
-        if (!/(hack|build|code|coding|contest|challenge|sprint|codesprint|codestorm)/.test(text)) continue
+        const text = `${item.title} ${item.description ?? ''}`.toLowerCase()
+        if (!HACKATHON_KEYWORDS_PATTERN.test(text)) continue
 
         records.push({
           sourceId: `hr-${item.link.split('/').filter(Boolean).pop() ?? Buffer.from(item.title).toString('base64').slice(0,12)}`,

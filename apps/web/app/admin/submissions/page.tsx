@@ -15,7 +15,7 @@ export default async function AdminSubmissionsPage({
   const VALID_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'all'] as const
   const statusParam = params.status
   const statusFilter = VALID_STATUSES.includes(statusParam as (typeof VALID_STATUSES)[number])
-    ? statusParam ?? 'PENDING'
+    ? statusParam
     : 'PENDING'
 
   const submissions = await prisma.organizerSubmission.findMany({

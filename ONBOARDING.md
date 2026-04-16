@@ -107,12 +107,7 @@ vercel --prod
 ```
 Set all env vars in Vercel dashboard.
 
-**Pipeline (Railway):**
-- Connect GitHub repo to Railway
-- Set root directory: `apps/pipeline`
-- Set all env vars in Railway dashboard
-- Railway auto-deploys on push to main
-
-**GitHub Actions:**
-- Set `PIPELINE_WEBHOOK_URL` secret in GitHub repo settings
-- The daily cron workflow in `.github/workflows/pipeline-trigger.yml` fires at 02:00 UTC
+**Pipeline (GitHub Actions):**
+- Set `DATABASE_URL` secret in GitHub repo settings
+- The daily cron workflow in `.github/workflows/pipeline-trigger.yml` runs at 02:00 UTC
+- You can manually run the same workflow via **Actions → Daily Pipeline Run → Run workflow**

@@ -1,4 +1,4 @@
-name: Daily Pipeline Trigger
+name: Daily Pipeline Run
 
 on:
   schedule:
@@ -6,21 +6,26 @@ on:
   workflow_dispatch:        # allow manual trigger from GitHub Actions UI
 
 jobs:
-  trigger-pipeline:
-    name: Trigger Pipeline Run
+  run-pipeline:
+    name: Run Pipeline
     runs-on: ubuntu-latest
 
     steps:
-      - name: Trigger 1ph pipeline
-        run: |
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X POST "${{ secrets.PIPELINE_WEBHOOK_URL }}" \
-            -H "Authorization: Bearer ${{ secrets.PIPELINE_WEBHOOK_SECRET }}" \
-            -H "Content-Type: application/json")
-          
-          if [ "$RESPONSE" != "200" ]; then
-            echo "❌ Pipeline trigger failed with status: $RESPONSE"
-            exit 1
-          fi
-          
-          echo "✅ Pipeline triggered successfully"
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate Prisma client
+        run: npx prisma generate --schema packages/db/schema.prisma
+
+      - name: Run pipeline
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx ts-node apps/pipeline/scheduler/run-once.ts

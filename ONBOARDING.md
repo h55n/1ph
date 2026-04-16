@@ -109,5 +109,8 @@ Set all env vars in Vercel dashboard.
 
 **Pipeline (GitHub Actions):**
 - Set `DATABASE_URL` secret in GitHub repo settings
+- For immediate content refresh after each run, also set:
+  - `WEB_REVALIDATE_URL` = `https://your-domain.com/api/revalidate`
+  - `WEB_REVALIDATE_SECRET` = same value as `REVALIDATE_SECRET` in web env
 - The daily cron workflow in `.github/workflows/pipeline-trigger.yml` runs at 02:00 UTC
 - You can manually run the same workflow via **Actions → Daily Pipeline Run → Run workflow**

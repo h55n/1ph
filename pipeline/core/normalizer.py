@@ -54,6 +54,15 @@ def _parse_date(val: Optional[str]) -> Optional[str]:
     return None
 
 
+def _to_timestamp(date_str: Optional[str]) -> Optional[str]:
+    """Convert YYYY-MM-DD to full ISO timestamp for Postgres DateTime columns."""
+    if not date_str:
+        return None
+    if "T" in date_str:
+        return date_str
+    return f"{date_str}T00:00:00+00:00"
+
+
 def normalize(raw: RawHackathon) -> Optional[dict]:
     """
     Returns a dict ready for Supabase upsert, or None if critical fields missing.
@@ -94,10 +103,10 @@ def normalize(raw: RawHackathon) -> Optional[dict]:
         "prize_pool": raw.prize_pool,
         "prize_currency": raw.prize_currency or "USD",
         "prize_description": raw.prize_description,
-        "registration_open": _parse_date(raw.registration_open),
-        "registration_close": reg_close,
-        "event_start": _parse_date(raw.event_start) or reg_close,
-        "event_end": _parse_date(raw.event_end),
+        "registration_open": _to_timestamp(_parse_date(raw.registration_open)),
+        "registration_close": _to_timestamp(reg_close),
+        "event_start": _to_timestamp(_parse_date(raw.event_start) or reg_close),
+        "event_end": _to_timestamp(_parse_date(raw.event_end)),
         "apply_url": raw.apply_url.strip(),
         "source": raw.__class__.__module__.split(".")[-1].upper(),  # overridden by run.py
         "source_id": raw.source_id,

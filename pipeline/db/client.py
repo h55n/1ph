@@ -3,6 +3,7 @@ db/client.py — Supabase client wrapper.
 All DB access goes through here. Handles upserts, dedup checks, run logging.
 """
 import os
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -117,6 +118,7 @@ def log_pipeline_run(
     client = get_client()
     try:
         client.table("PipelineRun").insert({
+            "id": str(uuid.uuid4()),
             "source": source,
             "runAt": datetime.now(timezone.utc).isoformat(),
             "status": status,

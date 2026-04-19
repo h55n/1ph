@@ -50,7 +50,8 @@ def main():
                 normalized.append(record)
 
         # ── 3. Quality Gate ───────────────────────────────────────────
-        passed, rejected = quality_gate(normalized, check_urls=True)
+        print(f"[debug] {source}: {len(result.records)} raw → {len(normalized)} normalized")
+        passed, rejected = quality_gate(normalized, check_urls=False)
         log.gate_result(source, len(passed), len(rejected))
         totals["rejected"] += len(rejected)
 

@@ -56,7 +56,7 @@ def _check_url(apply_url: str) -> tuple[bool, str]:
 def _is_duplicate(record: dict, existing_titles: list[str]) -> tuple[bool, str]:
     title = record.get("title", "").lower()
     for existing in existing_titles:
-        if levenshtein(title, existing.lower()) < 10:
+        if levenshtein(title, existing.lower()) < 2:
             return True, "fuzzy_duplicate"
     return False, ""
 

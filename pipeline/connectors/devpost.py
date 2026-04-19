@@ -50,12 +50,19 @@ class DevpostConnector(BaseConnector):
                 # Load first page
                 try:
                     print(f"[{self.SOURCE}] Navigating to {LIST_URL}...")
-                    page.goto(LIST_URL, timeout=60000, wait_until="domcontentloaded")
-                    page.wait_for_timeout(random.randint(3000, 6000))
+                    response = page.goto(LIST_URL, timeout=60000, wait_until="commit")
+                    if response and response.status >= 400:
+                        print(f"[{self.SOURCE}] HTTP Error: {response.status}")
+                    page.wait_for_timeout(8000)
+                    # Check for any card element to confirm load
+                    page.wait_for_selector(".opportunity-card, [data-testid='opp-card'], .card", timeout=20000)
                 except Exception as e:
-                    print(f"[{self.SOURCE}] Navigation failed: {e}")
+                    print(f"[{self.SOURCE}] Navigation/Selector failed: {e}")
+                    try:
+                        print(f"[{self.SOURCE}] Page content snippet: {page.content()[:500]}")
+                    except: pass
                     browser.close()
-                    return ConnectorResult(source=self.SOURCE, records=[], status="FAILED", error=f"Navigation timeout/error: {str(e)}")
+                    return ConnectorResult(source=self.SOURCE, records=[], status="FAILED", error=f"Navigation/Selector error: {str(e)}")
 
                 pages_scraped = 0
                 max_pages = 4  # Reduced from 8 to speed up pipeline and avoid cloudflare flagging

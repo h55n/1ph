@@ -57,12 +57,18 @@ class UnstopConnector(BaseConnector):
 
                 try:
                     print(f"[{self.SOURCE}] Navigating to {LIST_URL}...")
-                    page.goto(LIST_URL, timeout=60000, wait_until="domcontentloaded")
-                    page.wait_for_timeout(random.randint(4000, 7000))
+                    response = page.goto(LIST_URL, timeout=60000, wait_until="commit")
+                    if response and response.status >= 400:
+                        print(f"[{self.SOURCE}] HTTP Error: {response.status}")
+                    page.wait_for_timeout(8000)
+                    page.wait_for_selector(".opportunity-card, [data-testid='opp-card'], .card.ng-star-inserted", timeout=20000)
                 except Exception as e:
-                    print(f"[{self.SOURCE}] Navigation failed: {e}")
+                    print(f"[{self.SOURCE}] Navigation/Selector failed: {e}")
+                    try:
+                        print(f"[{self.SOURCE}] Page content snippet: {page.content()[:500]}")
+                    except: pass
                     browser.close()
-                    return ConnectorResult(source=self.SOURCE, records=[], status="FAILED", error=f"Navigation timeout/error: {str(e)}")
+                    return ConnectorResult(source=self.SOURCE, records=[], status="FAILED", error=f"Navigation/Selector error: {str(e)}")
 
                 # Scroll to load more cards
                 for _ in range(4):

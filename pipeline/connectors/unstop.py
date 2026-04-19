@@ -56,11 +56,13 @@ class UnstopConnector(BaseConnector):
                 page = ctx.new_page()
 
                 try:
-                    page.goto(LIST_URL, timeout=30000, wait_until="networkidle")
-                    page.wait_for_timeout(random.randint(3000, 5000))
+                    print(f"[{self.SOURCE}] Navigating to {LIST_URL}...")
+                    page.goto(LIST_URL, timeout=60000, wait_until="domcontentloaded")
+                    page.wait_for_timeout(random.randint(4000, 7000))
                 except Exception as e:
+                    print(f"[{self.SOURCE}] Navigation failed: {e}")
                     browser.close()
-                    return ConnectorResult(source=self.SOURCE, records=[], status="FAILED", error=str(e))
+                    return ConnectorResult(source=self.SOURCE, records=[], status="FAILED", error=f"Navigation timeout/error: {str(e)}")
 
                 # Scroll to load more cards
                 for _ in range(4):

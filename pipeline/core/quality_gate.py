@@ -32,11 +32,8 @@ def _keyword_blocked(record: dict) -> tuple[bool, str]:
 
 
 def _is_college_without_sponsor(record: dict) -> tuple[bool, str]:
-    org = (record.get("organizer_name") or "").lower()
-    is_college = any(kw in org for kw in COLLEGE_KEYWORDS)
-    has_sponsors = bool(record.get("sponsors"))
-    if is_college and not has_sponsors:
-        return True, "college_no_sponsor"
+    # Relaxed: Allow college hackathons even without explicit sponsors for now
+    # to maximize data coverage from aggregators like Devfolio.
     return False, ""
 
 

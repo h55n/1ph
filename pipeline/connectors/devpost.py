@@ -49,14 +49,16 @@ class DevpostConnector(BaseConnector):
 
                 # Load first page
                 try:
-                    page.goto(LIST_URL, timeout=30000, wait_until="domcontentloaded")
-                    page.wait_for_timeout(random.randint(2000, 4000))
+                    print(f"[{self.SOURCE}] Navigating to {LIST_URL}...")
+                    page.goto(LIST_URL, timeout=60000, wait_until="domcontentloaded")
+                    page.wait_for_timeout(random.randint(3000, 6000))
                 except Exception as e:
+                    print(f"[{self.SOURCE}] Navigation failed: {e}")
                     browser.close()
-                    return ConnectorResult(source=self.SOURCE, records=[], status="FAILED", error=str(e))
+                    return ConnectorResult(source=self.SOURCE, records=[], status="FAILED", error=f"Navigation timeout/error: {str(e)}")
 
                 pages_scraped = 0
-                max_pages = 8
+                max_pages = 4  # Reduced from 8 to speed up pipeline and avoid cloudflare flagging
 
                 while pages_scraped < max_pages:
                     try:

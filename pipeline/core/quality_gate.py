@@ -71,34 +71,39 @@ def run(records: list[dict], check_urls: bool = True) -> tuple[list[dict], list[
         check_urls: set False in tests to skip network calls
 
     Returns:
-        (passed, rejected) — rejected have a '_reject_reason' key
+        (passed, rejected, stats) — rejected have a '_reject_reason' key
     """
     passed = []
     rejected = []
     seen_titles: list[str] = []
+    stats = {}
 
     for record in records:
         ok, reason = _has_required_fields(record)
         if not ok:
             record["_reject_reason"] = reason
+            stats[reason] = stats.get(reason, 0) + 1
             rejected.append(record)
             continue
 
         blocked, reason = _keyword_blocked(record)
         if blocked:
             record["_reject_reason"] = reason
+            stats[reason] = stats.get(reason, 0) + 1
             rejected.append(record)
             continue
 
         no_sponsor, reason = _is_college_without_sponsor(record)
         if no_sponsor:
             record["_reject_reason"] = reason
+            stats[reason] = stats.get(reason, 0) + 1
             rejected.append(record)
             continue
 
         dup, reason = _is_duplicate(record, seen_titles)
         if dup:
             record["_reject_reason"] = reason
+            stats[reason] = stats.get(reason, 0) + 1
             rejected.append(record)
             continue
 
@@ -106,10 +111,11 @@ def run(records: list[dict], check_urls: bool = True) -> tuple[list[dict], list[
             url_ok, reason = _check_url(record["apply_url"])
             if not url_ok:
                 record["_reject_reason"] = reason
+                stats[reason] = stats.get(reason, 0) + 1
                 rejected.append(record)
                 continue
 
         seen_titles.append(record.get("title", ""))
         passed.append(record)
 
-    return passed, rejected
+    return passed, rejected, stats

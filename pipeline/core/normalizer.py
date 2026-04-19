@@ -32,9 +32,23 @@ def _parse_date(val: Optional[str]) -> Optional[str]:
     val = str(val).strip()
     if val == "2099-12-31":
         return val
-    for fmt in ("%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%m/%d/%Y"):
+
+    iso_val = f"{val[:-1]}+00:00" if val.endswith("Z") else val
+    try:
+        return datetime.fromisoformat(iso_val).date().isoformat()
+    except ValueError:
+        pass
+
+    for fmt, slice_len in (
+        ("%Y-%m-%dT%H:%M:%SZ", 20),
+        ("%Y-%m-%dT%H:%M:%S", 19),
+        ("%Y-%m-%d", 10),
+        ("%d-%m-%Y", 10),
+        ("%d/%m/%Y", 10),
+        ("%m/%d/%Y", 10),
+    ):
         try:
-            return datetime.strptime(val[:len(fmt)], fmt).date().isoformat()
+            return datetime.strptime(val[:slice_len], fmt).date().isoformat()
         except ValueError:
             continue
     return None

@@ -51,8 +51,10 @@ def main():
 
         # ── 3. Quality Gate ───────────────────────────────────────────
         print(f"[debug] {source}: {len(result.records)} raw → {len(normalized)} normalized")
-        passed, rejected = quality_gate(normalized, check_urls=False)
+        passed, rejected, stats = quality_gate(normalized, check_urls=False)
         log.gate_result(source, len(passed), len(rejected))
+        if stats:
+            print(f"         ↳ Rejection reasons: {stats}")
         totals["rejected"] += len(rejected)
 
         if not passed:

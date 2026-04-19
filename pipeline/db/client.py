@@ -17,8 +17,8 @@ _client: Optional[Client] = None
 def get_client() -> Client:
     global _client
     if _client is None:
-        url = os.environ.get("SUPABASE_URL", "").strip()
-        key = os.environ.get("SUPABASE_SERVICE_KEY", "").strip()
+        url = os.environ.get("SUPABASE_URL", "").strip().strip('"').strip("'").strip()
+        key = os.environ.get("SUPABASE_SERVICE_KEY", "").strip().strip('"').strip("'").strip()
         if not url or not key:
             raise EnvironmentError(
                 "SUPABASE_URL and SUPABASE_SERVICE_KEY must be set. "

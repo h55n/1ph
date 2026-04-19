@@ -21,7 +21,7 @@ const SORT_OPTIONS = [
 ]
 
 function getDisplay(filter: typeof FILTERS[0], val: string) {
-  if ('display' in filter && filter.display) return (filter.display as Record<string, string>)[val] ?? val
+  if ('display' in filter && (filter as any).display) return ((filter as any).display)[val] ?? val
   return val
 }
 

@@ -50,4 +50,4 @@ jobs:
           curl --fail-with-body --silent \
             -X POST "$WEB_REVALIDATE_URL" \
             -H "Authorization: Bearer $WEB_REVALIDATE_SECRET" \
-            -H "Content-Type: application/json"
+            -H "Content-Type: application/json" || true

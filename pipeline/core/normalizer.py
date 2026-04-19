@@ -39,9 +39,16 @@ def _parse_date(val: Optional[str]) -> Optional[str]:
     except ValueError:
         pass
 
-    for fmt in ("%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%m/%d/%Y"):
+    for fmt, slice_len in (
+        ("%Y-%m-%dT%H:%M:%SZ", 20),
+        ("%Y-%m-%dT%H:%M:%S", 19),
+        ("%Y-%m-%d", 10),
+        ("%d-%m-%Y", 10),
+        ("%d/%m/%Y", 10),
+        ("%m/%d/%Y", 10),
+    ):
         try:
-            return datetime.strptime(val, fmt).date().isoformat()
+            return datetime.strptime(val[:slice_len], fmt).date().isoformat()
         except ValueError:
             continue
     return None

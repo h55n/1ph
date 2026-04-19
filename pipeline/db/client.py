@@ -42,6 +42,10 @@ def get_existing_ids(source: str) -> set[str]:
         return set()
 
 
+def to_camel_case(snake_str: str) -> str:
+    components = snake_str.split('_')
+    return components[0] + "".join(x.title() for x in components[1:])
+
 def upsert_hackathons(records: list[dict], source: str) -> dict:
     """
     Upserts a list of normalised hackathon dicts.
@@ -57,20 +61,23 @@ def upsert_hackathons(records: list[dict], source: str) -> dict:
     errors = 0
     now = datetime.now(timezone.utc).isoformat()
 
-    for record in records:
+    for raw_record in records:
+        # Convert all keys from snake_case to camelCase mapping for Prisma
+        record = {to_camel_case(k): v for k, v in raw_record.items() if v is not None}
+        
         # Stamp the source correctly
         record["source"] = source
-        record["last_synced_at"] = now
-        record["updated_at"] = now
+        record["lastSyncedAt"] = now
+        record["updatedAt"] = now
 
-        source_id = record.get("source_id")
+        source_id = record.get("sourceId")
         is_update = source_id and source_id in existing_ids
 
         try:
             if is_update:
                 # UPDATE — preserve created_at, id, is_verified, is_featured set by admin
                 update_fields = {k: v for k, v in record.items() if k not in (
-                    "id", "created_at", "is_verified", "is_featured", "slug"
+                    "id", "createdAt", "isVerified", "isFeatured", "slug"
                 )}
                 client.table("Hackathon").update(update_fields).eq("source", source).eq("sourceId", source_id).execute()
                 updated += 1
@@ -111,12 +118,12 @@ def log_pipeline_run(
     try:
         client.table("PipelineRun").insert({
             "source": source,
-            "run_at": datetime.now(timezone.utc).isoformat(),
+            "runAt": datetime.now(timezone.utc).isoformat(),
             "status": status,
-            "new_count": new_count,
-            "updated_count": updated_count,
-            "closed_count": closed_count,
-            "error_log": error_log,
+            "newCount": new_count,
+            "updatedCount": updated_count,
+            "closedCount": closed_count,
+            "errorLog": error_log,
         }).execute()
     except Exception as e:
         # Never let logging crash the pipeline

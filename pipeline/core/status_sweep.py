@@ -61,8 +61,8 @@ def run_sweep(supabase_client) -> dict:
 
     try:
         # Fetch all active hackathons
-        response = supabase_client.table("hackathons").select(
-            "id, registration_close, registration_open, status, apply_url, url_health_fails"
+        response = supabase_client.table("Hackathon").select(
+            "id, registrationClose, registrationOpen, status, applyUrl, urlHealthFails"
         ).neq("status", "CLOSED").execute()
 
         rows = response.data or []
@@ -77,21 +77,21 @@ def run_sweep(supabase_client) -> dict:
     for row in rows:
         try:
             new_status = calculate_status(
-                row.get("registration_close", ""),
-                row.get("registration_open"),
+                row.get("registrationClose", ""),
+                row.get("registrationOpen"),
             )
 
             update = {"id": row["id"], "status": new_status}
 
             # URL health check for active hackathons
-            current_fails = row.get("url_health_fails") or 0
-            url = row.get("apply_url", "")
+            current_fails = row.get("urlHealthFails") or 0
+            url = row.get("applyUrl", "")
 
             if url and new_status != "CLOSED":
                 alive = _check_url_health(url)
                 if not alive:
                     new_fails = current_fails + 1
-                    update["url_health_fails"] = new_fails
+                    update["urlHealthFails"] = new_fails
                     if new_fails >= 7:
                         update["status"] = "CLOSED"
                         summary["url_flagged"] += 1
@@ -100,7 +100,7 @@ def run_sweep(supabase_client) -> dict:
                         summary["url_flagged"] += 1
                 else:
                     if current_fails > 0:
-                        update["url_health_fails"] = 0  # reset on success
+                        update["urlHealthFails"] = 0  # reset on success
 
             if new_status == "CLOSED" and row.get("status") != "CLOSED":
                 summary["closed"] += 1
@@ -118,7 +118,7 @@ def run_sweep(supabase_client) -> dict:
         try:
             for record in chunk:
                 rid = record.pop("id")
-                supabase_client.table("hackathons").update(record).eq("id", rid).execute()
+                supabase_client.table("Hackathon").update(record).eq("id", rid).execute()
                 record["id"] = rid  # restore for logging
             summary["updated"] += len(chunk)
         except Exception as e:

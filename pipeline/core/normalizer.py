@@ -32,9 +32,16 @@ def _parse_date(val: Optional[str]) -> Optional[str]:
     val = str(val).strip()
     if val == "2099-12-31":
         return val
+
+    iso_val = val.replace("Z", "+00:00")
+    try:
+        return datetime.fromisoformat(iso_val).date().isoformat()
+    except ValueError:
+        pass
+
     for fmt in ("%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%m/%d/%Y"):
         try:
-            return datetime.strptime(val[:len(fmt)], fmt).date().isoformat()
+            return datetime.strptime(val, fmt).date().isoformat()
         except ValueError:
             continue
     return None

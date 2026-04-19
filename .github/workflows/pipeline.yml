@@ -38,6 +38,7 @@ jobs:
 
       - name: Revalidate frontend cache
         if: always()
+        continue-on-error: true
         env:
           WEB_REVALIDATE_URL: ${{ secrets.WEB_REVALIDATE_URL }}
           WEB_REVALIDATE_SECRET: ${{ secrets.WEB_REVALIDATE_SECRET }}

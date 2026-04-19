@@ -35,8 +35,8 @@ def get_existing_ids(source: str) -> set[str]:
     """
     client = get_client()
     try:
-        response = client.table("hackathons").select("source_id").eq("source", source).execute()
-        return {row["source_id"] for row in (response.data or []) if row.get("source_id")}
+        response = client.table("Hackathon").select("sourceId").eq("source", source).execute()
+        return {row["sourceId"] for row in (response.data or []) if row.get("sourceId")}
     except Exception as e:
         print(f"[db] Failed to fetch existing IDs for {source}: {e}")
         return set()
@@ -72,11 +72,11 @@ def upsert_hackathons(records: list[dict], source: str) -> dict:
                 update_fields = {k: v for k, v in record.items() if k not in (
                     "id", "created_at", "is_verified", "is_featured", "slug"
                 )}
-                client.table("hackathons").update(update_fields).eq("source", source).eq("source_id", source_id).execute()
+                client.table("Hackathon").update(update_fields).eq("source", source).eq("sourceId", source_id).execute()
                 updated += 1
             else:
                 # INSERT — full record
-                client.table("hackathons").insert(record).execute()
+                client.table("Hackathon").insert(record).execute()
                 inserted += 1
                 if source_id:
                     existing_ids.add(source_id)
@@ -87,7 +87,7 @@ def upsert_hackathons(records: list[dict], source: str) -> dict:
                 try:
                     import uuid
                     record["slug"] = f"{record['slug']}-{str(uuid.uuid4())[:4]}"
-                    client.table("hackathons").insert(record).execute()
+                    client.table("Hackathon").insert(record).execute()
                     inserted += 1
                 except Exception:
                     errors += 1
@@ -109,7 +109,7 @@ def log_pipeline_run(
     """Writes one row to the pipeline_runs table."""
     client = get_client()
     try:
-        client.table("pipeline_runs").insert({
+        client.table("PipelineRun").insert({
             "source": source,
             "run_at": datetime.now(timezone.utc).isoformat(),
             "status": status,

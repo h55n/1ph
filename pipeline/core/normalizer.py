@@ -33,7 +33,7 @@ def _parse_date(val: Optional[str]) -> Optional[str]:
     if val == "2099-12-31":
         return val
 
-    iso_val = val.replace("Z", "+00:00")
+    iso_val = f"{val[:-1]}+00:00" if val.endswith("Z") else val
     try:
         return datetime.fromisoformat(iso_val).date().isoformat()
     except ValueError:

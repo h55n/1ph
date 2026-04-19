@@ -54,8 +54,8 @@ class DevpostConnector(BaseConnector):
                     if response and response.status >= 400:
                         print(f"[{self.SOURCE}] HTTP Error: {response.status}")
                     page.wait_for_timeout(8000)
-                    # Check for any card element to confirm load
-                    page.wait_for_selector(".opportunity-card, [data-testid='opp-card'], .card", timeout=20000)
+                    # Check for Devpost-specific card elements
+                    page.wait_for_selector("article.challenge-listing, .challenge-listing", timeout=20000)
                 except Exception as e:
                     print(f"[{self.SOURCE}] Navigation/Selector failed: {e}")
                     try:

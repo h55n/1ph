@@ -62,8 +62,8 @@ class DevfolioConnector(BaseConnector):
                     if not title or not slug:
                         continue
 
-                    # Devfolio hackathon URLs are at /hackathons/{slug}
-                    apply_url = f"https://devfolio.co/hackathons/{slug}"
+                    # Devfolio hackathons live at {slug}.devfolio.co subdomains
+                    apply_url = f"https://{slug}.devfolio.co"
 
                     close_raw = src.get("submission_deadline") or src.get("ends_at") or src.get("registration_ends_at") or ""
                     close_date = close_raw[:10] if close_raw else "2099-12-31"
@@ -93,11 +93,12 @@ class DevfolioConnector(BaseConnector):
                     else:
                         mode = "ONLINE"
 
-                    # Build a richer description from available fields
+                    # Build a richer description — prioritize 'about' (full text) over 'description'
                     tagline = src.get("tagline") or ""
-                    description_raw = src.get("description") or src.get("about") or ""
-                    # Combine tagline + description for a fuller About section
-                    if tagline and description_raw:
+                    description_raw = src.get("about") or src.get("description") or src.get("tagline") or ""
+                    prize_description = src.get("prize_description") or None
+                    # Combine tagline + full about for a richer About section
+                    if tagline and description_raw and tagline != description_raw:
                         description = f"{tagline}. {description_raw}"[:1000]
                     elif tagline:
                         description = tagline
@@ -106,8 +107,8 @@ class DevfolioConnector(BaseConnector):
                     else:
                         description = title
 
-                    # long_description from description field (up to 2000 chars)
-                    long_desc = description_raw[:2000] if description_raw else None
+                    # long_description from about field (up to 5000 chars)
+                    long_desc = description_raw[:5000] if description_raw else None
 
                     # Sponsor extraction
                     raw_sponsors = src.get("sponsors") or []
@@ -127,8 +128,9 @@ class DevfolioConnector(BaseConnector):
                         apply_url=apply_url,
                         registration_close=close_date,
                         event_start=src.get("starts_at", "")[:10] if src.get("starts_at") else None,
-                        description=description[:500],
+                        description=description[:1000],
                         long_description=long_desc,
+                        prize_description=prize_description,
                         prize_pool=prize,
                         prize_currency=currency,
                         theme_tags=tags,

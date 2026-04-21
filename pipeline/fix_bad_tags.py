@@ -68,7 +68,7 @@ errors = 0
 for row in needs_fix:
     original = row["themeTags"]
     cleaned = fix_tags(original)
-    print(f"  [{row['title'][:50]}]: {original} → {cleaned}")
+    print(f"  [{row['title'][:50]}]: {original} -> {cleaned}")
     try:
         client.table("Hackathon").update({"themeTags": cleaned}).eq("id", row["id"]).execute()
         fixed += 1

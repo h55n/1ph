@@ -57,7 +57,7 @@ def run_sweep(supabase_client) -> dict:
 
     Returns a summary dict.
     """
-    summary = {"updated": 0, "closed": 0, "url_flagged": 0, "errors": 0}
+    summary = {"updated": 0, "closed": 0, "url_flagged": 0, "errors": 0, "deleted": 0}
 
     try:
         # Fetch all active hackathons
@@ -124,5 +124,15 @@ def run_sweep(supabase_client) -> dict:
         except Exception as e:
             print(f"[status_sweep] Batch update error: {e}")
             summary["errors"] += 1
+
+    # Delete hackathons closed for more than 7 days
+    from datetime import timedelta
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    try:
+        supabase_client.table("Hackathon").delete().eq("status", "CLOSED").lt("registrationClose", cutoff).execute()
+        print(f"[status_sweep] Deleted hackathons closed before {cutoff[:10]}")
+    except Exception as e:
+        print(f"[status_sweep] Deletion error: {e}")
+        summary["errors"] += 1
 
     return summary

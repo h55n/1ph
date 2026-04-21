@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   if (!secret) return NextResponse.json({ error: 'Not configured' }, { status: 500 })
   if (!isAuthorized(authHeader, secret)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  revalidatePath('/')
+  revalidatePath('/', 'layout')  // revalidates all pages
   revalidatePath('/hackathon/[slug]', 'page')
   revalidatePath('/sitemap.xml')
 

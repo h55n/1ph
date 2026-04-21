@@ -38,15 +38,20 @@ def _is_college_without_sponsor(record: dict) -> tuple[bool, str]:
 
 
 def _check_url(apply_url: str) -> tuple[bool, str]:
-    """HEAD request with 10s timeout. 2xx or 3xx = pass."""
+    """HEAD request with 10s timeout. 2xx or 3xx = pass. 401/403/429 = probably valid."""
     try:
         with httpx.Client(timeout=10, follow_redirects=True) as client:
             r = client.head(apply_url, headers={"User-Agent": "1ph-bot/1.0"})
             if r.status_code < 400:
                 return True, ""
+            # Rate-limited or auth-gated = probably valid, don't reject
+            if r.status_code in (401, 403, 429):
+                return True, ""
             # Some servers reject HEAD — try GET
             r2 = client.get(apply_url, headers={"User-Agent": "1ph-bot/1.0"})
             if r2.status_code < 400:
+                return True, ""
+            if r2.status_code in (401, 403, 429):
                 return True, ""
             return False, f"url_status:{r2.status_code}"
     except Exception as e:

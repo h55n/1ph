@@ -100,9 +100,9 @@ export default async function HackathonDetailPage({ params }: { params: Promise<
   const aboutText = h.longDescription || h.description || ''
   // Split into paragraphs if it has sentence breaks
   const aboutParagraphs = aboutText
-    .split(/\n\n|\. (?=[A-Z])/)
+    .split(/\n\n|\n(?=[A-Z])|\.\s+(?=[A-Z])/)
     .map((p) => p.trim())
-    .filter((p) => p.length > 10)
+    .filter((p) => p.length > 20)
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -236,7 +236,12 @@ export default async function HackathonDetailPage({ params }: { params: Promise<
           ) : (
             <p className="font-sans text-text-muted text-sm leading-relaxed">
               {aboutText ||
-                `${h.title} is a hackathon organised by ${h.organizerName}. Join builders, designers, and creators to compete, collaborate, and build something meaningful.`}
+                `${h.title} is a hackathon organised by ${h.organizerName}. ` +
+                `This is a ${h.mode === 'ONLINE' ? 'fully online' : h.mode === 'OFFLINE' ? 'in-person' : 'hybrid'} event ` +
+                `${h.scope === 'INDIA' ? 'focused on the Indian developer ecosystem' : 'open to participants worldwide'}. ` +
+                `${h.prizePool ? `With a prize pool of ${formatPrize(Number(h.prizePool), h.prizeCurrency)}, ` : ''}` +
+                `Teams of ${h.teamSizeMin}${h.teamSizeMax ? `–${h.teamSizeMax}` : '+'} can participate. ` +
+                `Registration closes ${new Date(h.registrationClose).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}.`}
             </p>
           )}
 

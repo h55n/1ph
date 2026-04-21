@@ -22,6 +22,7 @@ interface HackathonCardProps {
     mode: 'ONLINE' | 'OFFLINE' | 'HYBRID'
     themeTags: string[]
     scope: 'GLOBAL' | 'INDIA'
+    description?: string | null
   }
   index?: number
 }
@@ -109,9 +110,16 @@ export function HackathonCard({ hackathon, index = 0 }: HackathonCardProps) {
       </div>
 
       {/* Title */}
-      <h2 className="font-serif text-lg leading-tight text-text-primary mb-3 line-clamp-2">
+      <h2 className="font-serif text-lg leading-tight text-text-primary mb-2 line-clamp-2">
         {hackathon.title}
       </h2>
+
+      {/* Description preview */}
+      {hackathon.description && (
+        <p className="font-sans text-xs text-text-muted mb-3 line-clamp-2 leading-relaxed">
+          {hackathon.description}
+        </p>
+      )}
 
       {/* Status + deadline */}
       <div className="flex items-center justify-between mb-4">

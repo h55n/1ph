@@ -7,7 +7,7 @@ import { FilterBar } from '@/components/FilterBar'
 import { SearchBar } from '@/components/SearchBar'
 import type { Prisma } from '@prisma/client'
 
-export const revalidate = 3600
+export const revalidate = 1800
 
 interface SearchParams {
   scope?: string
@@ -69,6 +69,7 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
         prestigeTier: true, status: true, prizePool: true, prizeCurrency: true,
         prizeDescription: true, entryFee: true, entryFeeCurrency: true,
         registrationClose: true, mode: true, themeTags: true, scope: true,
+        description: true,
       },
     }),
     prisma.hackathon.count({ where }),

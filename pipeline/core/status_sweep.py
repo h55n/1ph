@@ -125,12 +125,14 @@ def run_sweep(supabase_client) -> dict:
             print(f"[status_sweep] Batch update error: {e}")
             summary["errors"] += 1
 
-    # Delete hackathons closed for more than 7 days
+    # Delete hackathons that have been in CLOSED status for 7+ days.
+    # We use updatedAt (last time the row was touched) NOT registrationClose,
+    # because registrationClose is always in the past for closed hackathons.
     from datetime import timedelta
     cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
     try:
-        supabase_client.table("Hackathon").delete().eq("status", "CLOSED").lt("registrationClose", cutoff).execute()
-        print(f"[status_sweep] Deleted hackathons closed before {cutoff[:10]}")
+        supabase_client.table("Hackathon").delete().eq("status", "CLOSED").lt("updatedAt", cutoff).execute()
+        print(f"[status_sweep] Deleted CLOSED hackathons not updated since {cutoff[:10]}")
     except Exception as e:
         print(f"[status_sweep] Deletion error: {e}")
         summary["errors"] += 1

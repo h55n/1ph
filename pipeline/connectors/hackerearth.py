@@ -1,85 +1,141 @@
 """
-hackerearth.py — HackerEarth public API connector.
+hackerearth.py — HackerEarth connector.
+Method: Playwright (v2 API deprecated, v3 requires auth, page is JS-rendered).
+Scrapes https://www.hackerearth.com/challenges/hackathon/
 """
-import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
+import random
 
 from .base import BaseConnector, ConnectorResult, RawHackathon
 
-API_URL = "https://www.hackerearth.com/api/v2/challenges/"
-HEADERS = {"Accept": "application/json", "User-Agent": "1ph-pipeline/1.0"}
+LIST_URL = "https://www.hackerearth.com/challenges/hackathon/"
 
 
 class HackerEarthConnector(BaseConnector):
     SOURCE = "HACKEREARTH"
     SCOPE = "GLOBAL"
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=20))
-    def _get(self, offset: int) -> dict:
-        with httpx.Client(timeout=20, headers=HEADERS) as client:
-            r = client.get(API_URL, params={
-                "limit": 20,
-                "offset": offset,
-                "type": "HACKATHON",
-                "status": "UPCOMING,ONGOING",
-            })
-            r.raise_for_status()
-            return r.json()
+    def _parse_prize(self, text: str):
+        if not text:
+            return None
+        import re
+        text = text.replace(",", "").replace("$", "").replace("₹", "").strip()
+        nums = re.findall(r"\d+(?:\.\d+)?", text)
+        if nums:
+            try:
+                return float(nums[0])
+            except ValueError:
+                pass
+        return None
 
     def fetch(self) -> ConnectorResult:
+        from playwright.sync_api import sync_playwright
+
         records = []
-        offset = 0
+        error = None
 
-        while True:
-            try:
-                data = self._get(offset)
-            except Exception as e:
-                status = "PARTIAL" if records else "FAILED"
-                return ConnectorResult(source=self.SOURCE, records=records, status=status, error=str(e))
+        try:
+            with sync_playwright() as pw:
+                browser = pw.chromium.launch(headless=True)
+                ctx = browser.new_context(
+                    user_agent=(
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+                    ),
+                    viewport={"width": 1366, "height": 768},
+                )
+                page = ctx.new_page()
 
-            challenges = data.get("response", {}).get("data", {}).get("results", [])
-            if not challenges:
-                break
-
-            for ch in challenges:
                 try:
-                    title = ch.get("title", "")
-                    url = ch.get("url", "")
-                    if not title or not url:
-                        continue
+                    print(f"[{self.SOURCE}] Navigating to {LIST_URL}...")
+                    page.goto(LIST_URL, timeout=60000, wait_until="domcontentloaded")
+                    page.wait_for_timeout(6000)
 
-                    close_raw = ch.get("registration_end_date") or ch.get("end_date") or ""
-                    close_date = close_raw[:10] if close_raw else "2099-12-31"
+                    # Scroll to trigger lazy loading
+                    for _ in range(3):
+                        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                        page.wait_for_timeout(random.randint(1500, 2000))
 
-                    prize_raw = ch.get("prize_amount") or ch.get("total_prize") or 0
-                    try:
-                        prize = float(str(prize_raw).replace(",", "").replace("$", "")) if prize_raw else None
-                    except ValueError:
-                        prize = None
+                    # Try common HackerEarth challenge card selectors
+                    cards = page.query_selector_all(
+                        ".challenge-card, .hackathon-card, "
+                        "[class*='challenge-card'], [class*='hackathon-card'], "
+                        ".card-content, article.challenge"
+                    )
+                    print(f"[{self.SOURCE}] Found {len(cards)} cards via primary selectors")
 
-                    tags_raw = ch.get("tags") or []
-                    tags = [t.get("name", "") for t in tags_raw if isinstance(t, dict)][:5]
+                    if not cards:
+                        # Fallback: grab all hackathon links
+                        links = page.query_selector_all("a[href*='/challenges/'][href*='/hackathon']")
+                        seen = set()
+                        for link in links:
+                            try:
+                                href = link.get_attribute("href") or ""
+                                if not href or href in seen:
+                                    continue
+                                seen.add(href)
+                                apply_url = href if href.startswith("http") else f"https://www.hackerearth.com{href}"
+                                title_el = link.query_selector("h2, h3, .title, [class*='title']")
+                                title = title_el.inner_text().strip() if title_el else link.inner_text().strip()
+                                if not title or len(title) < 3:
+                                    continue
+                                records.append(RawHackathon(
+                                    source_id=href.rstrip("/").split("/")[-1] or href,
+                                    title=title,
+                                    organizer_name="HackerEarth",
+                                    apply_url=apply_url,
+                                    registration_close="2099-12-31",
+                                    mode="ONLINE",
+                                    scope="GLOBAL",
+                                ))
+                            except Exception:
+                                continue
+                    else:
+                        for card in cards:
+                            try:
+                                title_el = card.query_selector("h2, h3, .title, [class*='title'], .challenge-name")
+                                link_el = card.query_selector("a[href]")
+                                if not title_el or not link_el:
+                                    continue
 
-                    records.append(RawHackathon(
-                        source_id=str(ch.get("id", url)),
-                        title=title,
-                        organizer_name=ch.get("company_name") or "HackerEarth",
-                        apply_url=url,
-                        registration_close=close_date,
-                        event_start=ch.get("start_date", "")[:10] if ch.get("start_date") else None,
-                        description=ch.get("description", "")[:500] if ch.get("description") else None,
-                        prize_pool=prize,
-                        theme_tags=tags,
-                        mode="ONLINE",
-                        scope="GLOBAL",
-                        organizer_logo_url=ch.get("company_logo_url"),
-                    ))
-                except Exception:
-                    continue
+                                title = title_el.inner_text().strip()
+                                href = link_el.get_attribute("href") or ""
+                                apply_url = href if href.startswith("http") else f"https://www.hackerearth.com{href}"
 
-            if len(challenges) < 20:
-                break
-            offset += 20
+                                prize_el = card.query_selector("[class*='prize'], [class*='reward'], .prize")
+                                prize_text = prize_el.inner_text().strip() if prize_el else ""
+                                prize = self._parse_prize(prize_text)
 
-        status = "SUCCESS" if records else "PARTIAL"
-        return ConnectorResult(source=self.SOURCE, records=records, status=status)
+                                deadline_el = card.query_selector("[class*='deadline'], [class*='date'], time, .time-remaining")
+                                deadline_text = deadline_el.inner_text().strip() if deadline_el else ""
+
+                                org_el = card.query_selector("[class*='company'], [class*='org'], [class*='host']")
+                                org = org_el.inner_text().strip() if org_el else "HackerEarth"
+
+                                tags_els = card.query_selector_all("[class*='tag'], [class*='skill']")
+                                tags = [t.inner_text().strip() for t in tags_els[:5] if t.inner_text().strip()]
+
+                                records.append(RawHackathon(
+                                    source_id=href.rstrip("/").split("/")[-1] or apply_url,
+                                    title=title,
+                                    organizer_name=org,
+                                    apply_url=apply_url,
+                                    registration_close="2099-12-31",
+                                    prize_pool=prize,
+                                    theme_tags=tags,
+                                    mode="ONLINE",
+                                    scope="GLOBAL",
+                                ))
+                            except Exception:
+                                continue
+
+                except Exception as e:
+                    print(f"[{self.SOURCE}] Error: {e}")
+                    error = str(e)
+                finally:
+                    browser.close()
+
+        except Exception as e:
+            error = str(e)
+
+        status = "SUCCESS" if records else ("PARTIAL" if error else "FAILED")
+        return ConnectorResult(source=self.SOURCE, records=records, status=status, error=error)

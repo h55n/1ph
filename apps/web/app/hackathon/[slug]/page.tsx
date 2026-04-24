@@ -96,13 +96,42 @@ export default async function HackathonDetailPage({ params }: { params: Promise<
     .map(safeTag)
     .filter((t) => t.length > 0 && t.length < 60)
 
-  // Build a rich About text
-  const aboutText = h.longDescription || h.description || ''
-  // Split into paragraphs if it has sentence breaks
-  const aboutParagraphs = aboutText
-    .split(/\n\n|\n(?=[A-Z])|\.\s+(?=[A-Z])/)
-    .map((p) => p.trim())
-    .filter((p) => p.length > 20)
+  // Build a rich About text — prefer longDescription, then description
+  const rawAbout = h.longDescription || h.description || ''
+
+
+  // Split into paragraphs — respect explicit newlines, then split on sentence boundaries
+  const aboutParagraphs = rawAbout
+    ? rawAbout
+        .split(/\n\n+|\n(?=[A-Z])/)
+        .map((p) => p.trim())
+        .filter((p) => p.length > 20)
+    : [
+        // Fallback: present as 3 logical paragraphs
+        [
+          `${h.title} is a ${h.mode === 'ONLINE' ? 'fully online' : h.mode === 'OFFLINE' ? 'in-person' : 'hybrid'} hackathon organised by ${h.organizerName}.`,
+          h.scope === 'INDIA'
+            ? 'This event is focused on the Indian developer and startup ecosystem, welcoming participants from across the country.'
+            : 'This is a global event open to participants from around the world.',
+          h.eligibility === 'STUDENTS'
+            ? 'The hackathon is exclusively open to students.'
+            : h.eligibility === 'PROFESSIONALS'
+            ? 'Open to working professionals.'
+            : 'Open to everyone — students, professionals, and independent developers are welcome.',
+        ].join(' '),
+        [
+          h.prizePool
+            ? `With a prize pool of ${formatPrize(Number(h.prizePool), h.prizeCurrency)}, the competition offers significant rewards for the best innovations.`
+            : 'Participants compete for recognition, opportunities, and exclusive rewards from the organising team.',
+          `Teams of ${h.teamSizeMin}${h.teamSizeMax ? `–${h.teamSizeMax}` : '+'} members can collaborate to build solutions${h.durationType === 'HR24' ? ' in a high-intensity 24-hour sprint' : h.durationType === 'HR48' ? ' over 48 hours' : h.durationType === 'WEEK' ? ' over the course of a week' : ''}.`,
+        ].join(' '),
+        [
+          h.themeTags && h.themeTags.length > 0
+            ? `Key themes and tracks include ${h.themeTags.slice(0, 4).map((t: string) => safeTag(t)).filter(Boolean).join(', ')}.`
+            : '',
+          `Registration closes on ${new Date(h.registrationClose).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}. Don't miss the deadline — apply early to secure your spot.`,
+        ].filter(Boolean).join(' '),
+      ].filter((p) => p.length > 20)
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -225,25 +254,13 @@ export default async function HackathonDetailPage({ params }: { params: Promise<
         {/* About — rich, multi-paragraph */}
         <div>
           <h2 className="font-serif text-xl text-text-primary mb-3">About</h2>
-          {aboutParagraphs.length > 1 ? (
-            <div className="space-y-3">
-              {aboutParagraphs.map((para, i) => (
-                <p key={i} className="font-sans text-text-muted text-sm leading-relaxed">
-                  {para.endsWith('.') ? para : `${para}.`}
-                </p>
-              ))}
-            </div>
-          ) : (
-            <p className="font-sans text-text-muted text-sm leading-relaxed">
-              {aboutText ||
-                `${h.title} is a hackathon organised by ${h.organizerName}. ` +
-                `This is a ${h.mode === 'ONLINE' ? 'fully online' : h.mode === 'OFFLINE' ? 'in-person' : 'hybrid'} event ` +
-                `${h.scope === 'INDIA' ? 'focused on the Indian developer ecosystem' : 'open to participants worldwide'}. ` +
-                `${h.prizePool ? `With a prize pool of ${formatPrize(Number(h.prizePool), h.prizeCurrency)}, ` : ''}` +
-                `Teams of ${h.teamSizeMin}${h.teamSizeMax ? `–${h.teamSizeMax}` : '+'} can participate. ` +
-                `Registration closes ${new Date(h.registrationClose).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}.`}
-            </p>
-          )}
+          <div className="space-y-3">
+            {aboutParagraphs.map((para, i) => (
+              <p key={i} className="font-sans text-text-muted text-sm leading-relaxed">
+                {para.endsWith('.') || para.endsWith('!') || para.endsWith('?') ? para : `${para}.`}
+              </p>
+            ))}
+          </div>
 
           {/* Key details chips below About */}
           <div className="flex flex-wrap gap-2 mt-4">

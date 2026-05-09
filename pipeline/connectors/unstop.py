@@ -9,7 +9,7 @@ import re
 from .base import BaseConnector, ConnectorResult, RawHackathon
 
 LIST_URL = "https://unstop.com/hackathons"
-BLOCKLIST = {"quiz", "case study", "debate", "trivia", "essay", "moot court", "management", "contest"}
+BLOCKLIST = {"quiz", "trivia", "essay", "moot court", "aptitude"}
 
 
 def _is_blocked(title: str) -> bool:

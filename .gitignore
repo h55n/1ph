@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+apps/web/.next/
+apps/web/out/
+
+# Prisma generated client
+packages/db/node_modules/
+
+# Environment files — NEVER COMMIT
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+apps/web/.env.local
+pipeline/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+dist/
+*.egg-info/
+.pytest_cache/
+
+# Playwright browsers (downloaded at CI time)
+pipeline/.playwright/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Turbo cache
+.turbo/

@@ -1,0 +1,18 @@
+{
+  "global": [
+    "google", "meta", "microsoft", "amazon", "github", "nasa", "openai",
+    "anthropic", "goldman sachs", "jpmorgan", "jp morgan", "ethereum foundation",
+    "united nations", "un women", "world bank", "ieee", "acm", "ibm", "apple",
+    "netflix", "stripe", "cloudflare", "nvidia", "spacex", "tesla"
+  ],
+  "india": [
+    "flipkart", "walmart global tech", "nasscom", "dpiit", "startup india",
+    "isro", "nic", "smart india hackathon", "sih", "ministry of education",
+    "government of india", "niti aayog", "meity", "reliance", "tata",
+    "infosys", "wipro", "hcl", "swiggy", "zomato", "razorpay", "zepto"
+  ],
+  "iit_keywords": [
+    "iit bombay", "iit delhi", "iit madras", "iit kanpur", "iit kharagpur",
+    "iit roorkee", "iit guwahati", "iit hyderabad", "iit national"
+  ]
+}

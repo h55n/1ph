@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  :root {
+    --font-serif: 'DM Serif Display', Georgia, serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --font-sans: 'Inter', system-ui, sans-serif;
+  }
+
+  body {
+    background-color: #26150B;
+    color: #F5EDE3;
+  }
+
+  ::selection {
+    background-color: #91B2DD33;
+    color: #F5EDE3;
+  }
+
+  :focus-visible {
+    outline: 2px solid #91B2DD;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #26150B; }
+  ::-webkit-scrollbar-thumb { background: #4A2E18; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #91B2DD55; }
+}
+
+@layer utilities {
+  .font-serif { font-family: var(--font-serif); }
+  .font-mono  { font-family: var(--font-mono); }
+  .font-sans  { font-family: var(--font-sans); }
+}

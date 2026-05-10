@@ -7,6 +7,7 @@ from .startup_grants_india import StartupGrantsIndiaConnector
 from .devpost import DevpostConnector
 from .unstop import UnstopConnector
 from .hackerrank import HackerRankConnector
+from .luma import LumaConnector
 
 ALL_CONNECTORS = [
     MLHConnector,
@@ -18,4 +19,5 @@ ALL_CONNECTORS = [
     DevpostConnector,
     UnstopConnector,
     HackerRankConnector,
+    LumaConnector,
 ]

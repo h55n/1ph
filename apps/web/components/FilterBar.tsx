@@ -11,6 +11,7 @@ const FILTERS = [
   { key: 'team', label: 'Team', options: ['solo', '2-4', '5+'], display: { solo: 'Solo', '2-4': '2–4', '5+': '5+' } },
   { key: 'eligibility', label: 'Who', options: ['STUDENTS', 'OPEN', 'PROFESSIONALS'], display: { STUDENTS: 'Students', OPEN: 'Open to All', PROFESSIONALS: 'Professionals' } },
   { key: 'duration', label: 'Duration', options: ['HR24', 'HR48', 'WEEK', 'MONTH'], display: { HR24: '24hr', HR48: '48hr', WEEK: 'Week-long', MONTH: 'Month-long' } },
+  { key: 'city', label: 'City', options: ['bengaluru', 'mumbai', 'pune', 'delhi', 'hyderabad', 'chennai'], display: { bengaluru: 'Bengaluru', mumbai: 'Mumbai', pune: 'Pune', delhi: 'Delhi NCR', hyderabad: 'Hyderabad', chennai: 'Chennai' } },
 ]
 
 const SORT_OPTIONS = [

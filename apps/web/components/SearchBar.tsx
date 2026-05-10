@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useCallback, useState, useTransition } from 'react'
+import { useCallback, useState, useTransition, useRef } from 'react'
 
 export function SearchBar() {
   const router = useRouter()
@@ -21,11 +21,11 @@ export function SearchBar() {
   )
 
   // Simple debounce
-  let timer: ReturnType<typeof setTimeout>
-  const debouncedPush = (q: string) => {
-    clearTimeout(timer)
-    timer = setTimeout(() => push(q), 300)
-  }
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const debouncedPush = useCallback((q: string) => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => push(q), 300)
+  }, [push])
 
   return (
     <div className="relative flex-1 max-w-sm">

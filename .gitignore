@@ -47,3 +47,5 @@ Thumbs.db
 
 # Turbo cache
 .turbo/
+
+.vercel

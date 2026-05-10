@@ -90,6 +90,7 @@ export default async function HackathonDetailPage({ params }: { params: Promise<
   const prize = h.prizeDescription ?? formatPrize(h.prizePool ? Number(h.prizePool) : null, h.prizeCurrency)
   const fee = formatFee(h.entryFee ? Number(h.entryFee) : null, h.entryFeeCurrency)
   const deadline = formatDeadline(h.registrationClose)
+  const safeApplyUrl = h.applyUrl.startsWith('http') ? h.applyUrl : `https://${h.applyUrl}`
 
   // Sanitize theme tags — strip raw JSON objects
   const cleanTags = h.themeTags
@@ -241,7 +242,7 @@ export default async function HackathonDetailPage({ params }: { params: Promise<
           </button>
         ) : (
           <a
-            href={h.applyUrl}
+            href={safeApplyUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="block w-full py-3 rounded-card bg-accent text-bg font-mono font-medium text-center text-sm hover:bg-accent/90 transition-colors duration-150"
@@ -251,78 +252,49 @@ export default async function HackathonDetailPage({ params }: { params: Promise<
           </a>
         )}
 
-        {/* About — rich, multi-paragraph */}
-        <div>
-          <h2 className="font-serif text-xl text-text-primary mb-3">About</h2>
-          <div className="space-y-3">
-            {aboutParagraphs.map((para, i) => (
-              <p key={i} className="font-sans text-text-muted text-sm leading-relaxed">
-                {para.endsWith('.') || para.endsWith('!') || para.endsWith('?') ? para : `${para}.`}
-              </p>
-            ))}
-          </div>
+        {/* Detailed Sections */}
+        <div className="space-y-8">
+          {/* Problem Statement */}
+          <section>
+            <h2 className="font-serif text-xl text-text-primary mb-3">About & Problem Statement</h2>
+            <div className="space-y-3">
+              {aboutParagraphs.map((para, i) => (
+                <p key={i} className="font-sans text-text-muted text-sm leading-relaxed">
+                  {para.endsWith('.') || para.endsWith('!') || para.endsWith('?') ? para : `${para}.`}
+                </p>
+              ))}
+            </div>
+          </section>
 
-          {/* Key details chips below About */}
-          <div className="flex flex-wrap gap-2 mt-4">
-            <span className="px-3 py-1 bg-tag-bg border border-border rounded-chip font-mono text-xs text-text-muted">
-              {MODE_MAP[h.mode]}
-            </span>
-            <span className="px-3 py-1 bg-tag-bg border border-border rounded-chip font-mono text-xs text-text-muted">
-              {ELIGIBILITY_MAP[h.eligibility]}
-            </span>
-            <span className="px-3 py-1 bg-tag-bg border border-border rounded-chip font-mono text-xs text-text-muted">
-              Team: {h.teamSizeMin}{h.teamSizeMax ? `–${h.teamSizeMax}` : '+'} members
-            </span>
-            {h.scope === 'INDIA' && (
-              <span className="px-3 py-1 bg-tag-bg border border-border rounded-chip font-mono text-xs text-accent/80">
-                🇮🇳 India
-              </span>
-            )}
-          </div>
-        </div>
+          {/* Logistics */}
+          <section>
+            <h2 className="font-serif text-xl text-text-primary mb-3">Logistics & Eligibility</h2>
+            <ul className="space-y-2 font-mono text-sm text-text-muted list-disc list-inside">
+              <li><strong className="text-text-primary">Mode:</strong> {MODE_MAP[h.mode]} {h.scope === 'INDIA' && h.indiaRegion ? `(${h.indiaRegion})` : ''}</li>
+              <li><strong className="text-text-primary">Eligibility:</strong> {ELIGIBILITY_MAP[h.eligibility]}</li>
+              <li><strong className="text-text-primary">Team Size:</strong> {h.teamSizeMin}{h.teamSizeMax ? `–${h.teamSizeMax}` : '+'} members</li>
+              <li><strong className="text-text-primary">Duration:</strong> {DURATION_MAP[h.durationType]}</li>
+            </ul>
+          </section>
 
-        {/* Dates */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {h.registrationOpen && (
-            <div className="bg-card border border-border rounded-card p-3">
-              <div className="font-mono text-xs text-text-muted mb-1">Registration Opens</div>
-              <div className="font-mono text-sm text-text-primary">
-                {new Date(h.registrationOpen).toLocaleDateString('en-IN', {
-                  day: 'numeric', month: 'short', year: 'numeric',
-                })}
-              </div>
-            </div>
-          )}
-          <div className="bg-card border border-border rounded-card p-3">
-            <div className="font-mono text-xs text-text-muted mb-1">
-              {isClosed ? 'Registration Closed' : 'Registration Deadline'}
-            </div>
-            <div className={`font-mono text-sm ${isClosed ? 'text-text-muted' : 'text-closing'}`}>
-              {new Date(h.registrationClose).toLocaleDateString('en-IN', {
-                day: 'numeric', month: 'short', year: 'numeric',
-              })}
-            </div>
-          </div>
-          {h.eventStart && (
-            <div className="bg-card border border-border rounded-card p-3">
-              <div className="font-mono text-xs text-text-muted mb-1">Event Start</div>
-              <div className="font-mono text-sm text-text-primary">
-                {new Date(h.eventStart).toLocaleDateString('en-IN', {
-                  day: 'numeric', month: 'short', year: 'numeric',
-                })}
-              </div>
-            </div>
-          )}
-          {h.eventEnd && (
-            <div className="bg-card border border-border rounded-card p-3">
-              <div className="font-mono text-xs text-text-muted mb-1">Event End</div>
-              <div className="font-mono text-sm text-text-primary">
-                {new Date(h.eventEnd).toLocaleDateString('en-IN', {
-                  day: 'numeric', month: 'short', year: 'numeric',
-                })}
-              </div>
-            </div>
-          )}
+          {/* Timeline */}
+          <section>
+            <h2 className="font-serif text-xl text-text-primary mb-3">Timeline</h2>
+            <ul className="space-y-2 font-mono text-sm text-text-muted list-disc list-inside">
+              {h.registrationOpen && <li><strong className="text-text-primary">Registration Opens:</strong> {new Date(h.registrationOpen).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric'})}</li>}
+              <li><strong className="text-text-primary">{isClosed ? 'Registration Closed:' : 'Registration Deadline:'}</strong> {new Date(h.registrationClose).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric'})}</li>
+              {h.eventStart && <li><strong className="text-text-primary">Event Starts:</strong> {new Date(h.eventStart).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric'})}</li>}
+              {h.eventEnd && <li><strong className="text-text-primary">Event Ends:</strong> {new Date(h.eventEnd).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric'})}</li>}
+            </ul>
+          </section>
+
+          {/* Prizes */}
+          <section>
+            <h2 className="font-serif text-xl text-text-primary mb-3">Prizes & Rewards</h2>
+            <p className="font-sans text-sm text-text-muted">
+              <strong className="text-text-primary text-lg">{prize}</strong> {h.prizeDescription ? `— ${h.prizeDescription}` : ''}
+            </p>
+          </section>
         </div>
 
         {/* Theme tags — only shown if clean tags exist */}

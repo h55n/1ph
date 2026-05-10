@@ -3,6 +3,7 @@ import { formatDistanceToNowStrict } from 'date-fns'
 export function formatDeadline(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date
   if (isNaN(d.getTime())) return '—'
+  if (d.getFullYear() >= 2099) return 'Ongoing'
   const now = new Date()
   if (d < now) return 'Closed'
   return formatDistanceToNowStrict(d, { addSuffix: true })

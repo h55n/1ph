@@ -20,10 +20,11 @@ interface SearchParams {
   duration?: string
   sort?: string
   status?: string
+  city?: string
 }
 
 async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const { scope, q, theme, mode, fee, team, eligibility, duration, sort, status } = await searchParams
+  const { scope, q, theme, mode, fee, team, eligibility, duration, sort, status, city } = await searchParams
 
   const where: Prisma.HackathonWhereInput = {}
 
@@ -49,6 +50,24 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
       { organizerName: { contains: q, mode: 'insensitive' } },
       { themeTags: { has: q } },
     ]
+  }
+
+  if (city) {
+    const ci = city.toLowerCase()
+    const cityOr = [
+      { indiaRegion: { contains: ci, mode: 'insensitive' } },
+      { title: { contains: ci, mode: 'insensitive' } },
+      { description: { contains: ci, mode: 'insensitive' } },
+    ]
+    if (where.AND) {
+      if (Array.isArray(where.AND)) {
+        where.AND.push({ OR: cityOr })
+      } else {
+        where.AND = [where.AND, { OR: cityOr }]
+      }
+    } else {
+      where.AND = [{ OR: cityOr }]
+    }
   }
 
   const SORT_MAP: Record<string, Prisma.HackathonOrderByWithRelationInput> = {

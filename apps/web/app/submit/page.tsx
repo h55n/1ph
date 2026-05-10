@@ -1,6 +1,4 @@
 export default function SubmitPage() {
-  const formUrl = process.env.NEXT_PUBLIC_ORGANIZER_FORM_URL ?? '#'
-
   return (
     <div className="max-w-xl mx-auto pt-12 space-y-8">
       <div>
@@ -11,34 +9,48 @@ export default function SubmitPage() {
         </p>
       </div>
 
-      <div className="bg-card border border-border rounded-card p-6 space-y-4">
-        <h2 className="font-mono text-sm text-text-muted uppercase tracking-wider">How it works</h2>
-        <ol className="space-y-3">
-          {[
-            'Fill out the form below — takes 3 minutes.',
-            'We review your submission within 48 hours.',
-            'Approved hackathons go live with a verified badge.',
-          ].map((step, i) => (
-            <li key={i} className="flex items-start gap-3">
-              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-tag-bg border border-border flex items-center justify-center font-mono text-xs text-accent">
-                {i + 1}
-              </span>
-              <span className="font-sans text-sm text-text-muted">{step}</span>
-            </li>
-          ))}
-        </ol>
+      <div className="bg-card border border-border rounded-card p-6">
+        <form action="https://formsubmit.co/hassan0rehman@gmail.com" method="POST" className="space-y-4">
+          {/* FormSubmit configurations */}
+          <input type="hidden" name="_subject" value="New Hackathon Submission - 1ph" />
+          <input type="hidden" name="_captcha" value="false" />
+          <input type="hidden" name="_next" value="https://1ph.vercel.app/" />
+
+          <div>
+            <label className="block font-mono text-xs text-text-muted mb-1" htmlFor="orgName">Organizer Name *</label>
+            <input required type="text" id="orgName" name="Organizer Name" placeholder="e.g. MLH" className="w-full bg-bg border border-border rounded-chip px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent" />
+          </div>
+
+          <div>
+            <label className="block font-mono text-xs text-text-muted mb-1" htmlFor="title">Hackathon Title *</label>
+            <input required type="text" id="title" name="Hackathon Title" placeholder="e.g. HackMIT 2026" className="w-full bg-bg border border-border rounded-chip px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent" />
+          </div>
+
+          <div>
+            <label className="block font-mono text-xs text-text-muted mb-1" htmlFor="applyUrl">Apply URL *</label>
+            <input required type="url" id="applyUrl" name="Apply URL" placeholder="https://..." className="w-full bg-bg border border-border rounded-chip px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent" />
+          </div>
+
+          <div>
+            <label className="block font-mono text-xs text-text-muted mb-1" htmlFor="email">Your Email *</label>
+            <input required type="email" id="email" name="Email" placeholder="To reach you if we have questions" className="w-full bg-bg border border-border rounded-chip px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent" />
+          </div>
+
+          <div>
+            <label className="block font-mono text-xs text-text-muted mb-1" htmlFor="notes">Additional Details (Optional)</label>
+            <textarea id="notes" name="Additional Notes" rows={3} placeholder="Prizes, mode, eligibility, etc." className="w-full bg-bg border border-border rounded-chip px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"></textarea>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full py-3 mt-4 rounded-card bg-accent text-bg font-mono font-medium text-center text-sm hover:bg-accent/90 transition-colors duration-150"
+          >
+            Submit Hackathon →
+          </button>
+        </form>
       </div>
 
-      <a
-        href={formUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block w-full py-3 rounded-card bg-accent text-bg font-mono font-medium text-center text-sm hover:bg-accent/90 transition-colors duration-150"
-      >
-        Submit via Google Form →
-      </a>
-
-      <p className="font-mono text-xs text-text-muted text-center">
+      <p className="font-mono text-xs text-text-muted text-center pb-8">
         Questions? Email{' '}
         <a href="mailto:hello@1ph.dev" className="text-accent hover:underline">hello@1ph.dev</a>
       </p>

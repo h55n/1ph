@@ -18,7 +18,10 @@
         "GITHUB_CLIENT_ID",
         "GITHUB_CLIENT_SECRET",
         "REVALIDATE_SECRET",
-        "ADMIN_EMAIL"
+        "ADMIN_EMAIL",
+        "SUPABASE_SERVICE_KEY",
+        "WEB_REVALIDATE_URL",
+        "WEB_REVALIDATE_SECRET"
       ]
     },
     "dev": {

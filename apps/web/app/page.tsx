@@ -46,18 +46,18 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
 
   if (q) {
     where.OR = [
-      { title: { contains: q, mode: 'insensitive' } },
-      { organizerName: { contains: q, mode: 'insensitive' } },
+      { title: { contains: q, mode: 'insensitive' as const } },
+      { organizerName: { contains: q, mode: 'insensitive' as const } },
       { themeTags: { has: q } },
     ]
   }
 
   if (city) {
     const ci = city.toLowerCase()
-    const cityOr = [
-      { indiaRegion: { contains: ci, mode: 'insensitive' } },
-      { title: { contains: ci, mode: 'insensitive' } },
-      { description: { contains: ci, mode: 'insensitive' } },
+    const cityOr: Prisma.HackathonWhereInput[] = [
+      { indiaRegion: { contains: ci, mode: 'insensitive' as const } },
+      { title: { contains: ci, mode: 'insensitive' as const } },
+      { description: { contains: ci, mode: 'insensitive' as const } },
     ]
     if (where.AND) {
       if (Array.isArray(where.AND)) {

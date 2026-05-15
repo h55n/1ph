@@ -36,6 +36,7 @@ export function FilterBar() {
     const params = new URLSearchParams(searchParams.toString())
     if (value === null || value === searchParams.get(key)) params.delete(key)
     else params.set(key, value)
+    params.delete('page') // Reset pagination on filter change
     router.push(`${pathname}?${params.toString()}`)
     setOpenDropdown(null)
   }
@@ -51,13 +52,13 @@ export function FilterBar() {
             searchParams.get('sort') ? 'border-accent text-accent bg-accent/10' : 'border-border text-text-muted hover:border-accent/50 hover:text-text-primary'
           )}
         >
-          Sort: {SORT_OPTIONS.find((s) => s.value === (searchParams.get('sort') ?? 'prestige'))?.label}
+          Sort: {SORT_OPTIONS.find((s) => s.value === (searchParams.get('sort') ?? 'newest'))?.label}
           <span className="text-xs">▾</span>
         </button>
         {openDropdown === 'sort' && (
           <Dropdown onClose={() => setOpenDropdown(null)}>
             {SORT_OPTIONS.map((opt) => (
-              <DropdownItem key={opt.value} active={(searchParams.get('sort') ?? 'prestige') === opt.value} onClick={() => setParam('sort', opt.value)}>
+              <DropdownItem key={opt.value} active={(searchParams.get('sort') ?? 'newest') === opt.value} onClick={() => setParam('sort', opt.value)}>
                 {opt.label}
               </DropdownItem>
             ))}

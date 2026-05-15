@@ -30,18 +30,24 @@ const config: Config = {
         chip: '4px',
       },
       animation: {
-        'fade-in':   'fadeIn 300ms ease-out forwards',
-        'pulse-dot': 'pulseDot 1.5s ease-in-out infinite',
+        'fade-in':   'fadeIn 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'pulse-dot': 'pulseDot 2s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
-          '0%':   { opacity: '0', transform: 'translateY(6px)' },
+          '0%':   { opacity: '0', transform: 'translateY(10px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         pulseDot: {
           '0%, 100%': { opacity: '1' },
-          '50%':      { opacity: '0.3' },
+          '50%':      { opacity: '0.4' },
         },
+      },
+      transitionDuration: {
+        '500': '500ms',
+      },
+      transitionTimingFunction: {
+        'effortless': 'cubic-bezier(0.16, 1, 0.3, 1)',
       },
     },
   },

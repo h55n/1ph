@@ -5,9 +5,11 @@ import { SkeletonGrid } from '@/components/SkeletonCard'
 import { ScopeToggle } from '@/components/ScopeToggle'
 import { FilterBar } from '@/components/FilterBar'
 import { SearchBar } from '@/components/SearchBar'
+import { Pagination } from '@/components/Pagination'
+import { StatusToggle } from '@/components/StatusToggle'
 import type { Prisma } from '@prisma/client'
 
-export const revalidate = 1800
+export const revalidate = 0
 
 interface SearchParams {
   scope?: string
@@ -21,35 +23,66 @@ interface SearchParams {
   sort?: string
   status?: string
   city?: string
+  page?: string
 }
 
 async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const { scope, q, theme, mode, fee, team, eligibility, duration, sort, status, city } = await searchParams
+  const { scope, q, theme, mode, fee, team, eligibility, duration, sort, status, city, page } = await searchParams
+  const PAGE_SIZE = 16
+  const parsedPage = parseInt(page ?? '1', 10)
+  const pageNum = isNaN(parsedPage) ? 1 : Math.max(1, parsedPage)
 
-  const where: Prisma.HackathonWhereInput = {}
-
-  if (status === 'CLOSED') {
-    where.status = 'CLOSED'
-  } else {
-    where.status = { in: ['OPEN', 'CLOSING_SOON', 'UPCOMING'] }
+  const where: Prisma.HackathonWhereInput = {
+    AND: []
   }
 
-  if (scope && scope !== 'all') where.scope = scope as 'GLOBAL' | 'INDIA'
-  if (theme) where.themeTags = { has: theme }
-  if (mode) where.mode = mode as 'ONLINE' | 'OFFLINE' | 'HYBRID'
-  if (eligibility) where.eligibility = eligibility as 'STUDENTS' | 'OPEN' | 'PROFESSIONALS'
-  if (duration) where.durationType = duration as 'HR24' | 'HR48' | 'WEEK' | 'MONTH' | 'CUSTOM'
-  if (fee === 'free') where.entryFee = null
-  if (fee === 'paid') where.entryFee = { not: null }
-  if (team === 'solo') where.teamSizeMax = 1
-  if (team === '2-4') where.AND = [{ teamSizeMin: { lte: 4 } }, { teamSizeMax: { gte: 2 } }]
+  const andArr = where.AND as Prisma.HackathonWhereInput[]
+
+  if (status === 'CLOSED') {
+    andArr.push({ status: 'CLOSED' })
+  } else {
+    andArr.push({ status: { in: ['OPEN', 'CLOSING_SOON', 'UPCOMING'] } })
+  }
+
+  if (scope && scope !== 'all') andArr.push({ scope: scope as 'GLOBAL' | 'INDIA' })
+  
+  if (theme) {
+    const themeMap: Record<string, string[]> = {
+      "AI/ML": ["ai", "ml", "artificial intelligence", "machine learning", "deep learning", "nlp"],
+      "Web3": ["web3", "crypto", "blockchain", "ethereum", "solana", "nft", "dao"],
+      "Fintech": ["fintech", "finance", "banking", "payment", "trading"],
+      "Health": ["health", "medtech", "healthcare", "medical", "fitness"],
+      "Gaming": ["gaming", "game", "unity", "unreal"],
+      "Social Impact": ["social impact", "sustainability", "climate", "environment"],
+      "EdTech": ["edtech", "education", "learning"],
+      "Hardware": ["hardware", "iot", "robotics"],
+    }
+    const keywords = themeMap[theme] || [theme]
+    const themeConditions: Prisma.HackathonWhereInput[] = [
+      { themeTags: { has: theme } },
+      ...keywords.map(kw => ({ title: { contains: kw, mode: 'insensitive' as const } })),
+      ...keywords.map(kw => ({ description: { contains: kw, mode: 'insensitive' as const } })),
+      ...keywords.map(kw => ({ themeTags: { has: kw } }))
+    ]
+    andArr.push({ OR: themeConditions })
+  }
+
+  if (mode) andArr.push({ mode: mode as 'ONLINE' | 'OFFLINE' | 'HYBRID' })
+  if (eligibility) andArr.push({ eligibility: eligibility as 'STUDENTS' | 'OPEN' | 'PROFESSIONALS' })
+  if (duration) andArr.push({ durationType: duration as 'HR24' | 'HR48' | 'WEEK' | 'MONTH' | 'CUSTOM' })
+  if (fee === 'free') andArr.push({ entryFee: null })
+  if (fee === 'paid') andArr.push({ entryFee: { not: null } })
+  if (team === 'solo') andArr.push({ teamSizeMax: 1 })
+  if (team === '2-4') andArr.push({ AND: [{ teamSizeMin: { lte: 4 } }, { teamSizeMax: { gte: 2 } }] })
 
   if (q) {
-    where.OR = [
-      { title: { contains: q, mode: 'insensitive' as const } },
-      { organizerName: { contains: q, mode: 'insensitive' as const } },
-      { themeTags: { has: q } },
-    ]
+    andArr.push({
+      OR: [
+        { title: { contains: q, mode: 'insensitive' as const } },
+        { organizerName: { contains: q, mode: 'insensitive' as const } },
+        { themeTags: { has: q } },
+      ]
+    })
   }
 
   if (city) {
@@ -59,15 +92,7 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
       { title: { contains: ci, mode: 'insensitive' as const } },
       { description: { contains: ci, mode: 'insensitive' as const } },
     ]
-    if (where.AND) {
-      if (Array.isArray(where.AND)) {
-        where.AND.push({ OR: cityOr })
-      } else {
-        where.AND = [where.AND, { OR: cityOr }]
-      }
-    } else {
-      where.AND = [{ OR: cityOr }]
-    }
+    andArr.push({ OR: cityOr })
   }
 
   const SORT_MAP: Record<string, Prisma.HackathonOrderByWithRelationInput> = {
@@ -76,15 +101,16 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
     prize:    { prizePool: 'desc' },
     newest:   { createdAt: 'desc' },
   }
-  const orderBy = SORT_MAP[sort ?? 'prestige'] ?? SORT_MAP.prestige
+  const orderBy = SORT_MAP[sort ?? 'newest'] ?? SORT_MAP.newest
 
   const [hackathonsSettled, totalSettled] = await Promise.allSettled([
     prisma.hackathon.findMany({
       where,
       orderBy,
-      take: 60,
+      take: PAGE_SIZE,
+      skip: (pageNum - 1) * PAGE_SIZE,
       select: {
-        slug: true, title: true, organizerName: true, organizerLogoUrl: true,
+        id: true, slug: true, title: true, organizerName: true, organizerLogoUrl: true,
         prestigeTier: true, status: true, prizePool: true, prizeCurrency: true,
         prizeDescription: true, entryFee: true, entryFeeCurrency: true,
         registrationClose: true, mode: true, themeTags: true, scope: true,
@@ -129,14 +155,12 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
           />
         ))}
       </div>
+      <Pagination totalItems={total} pageSize={PAGE_SIZE} />
     </>
   )
 }
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const { status } = await searchParams
-  const isClosedView = status === 'CLOSED'
-
   return (
     <div className="space-y-6">
       <div className="pt-4 pb-2">
@@ -155,28 +179,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <SearchBar />
         </div>
 
-        <div className="flex items-center gap-2">
-          <a
-            href="/"
-            className={`px-3 py-1 rounded-chip text-xs font-mono border transition-all duration-150 ${
-              !isClosedView
-                ? 'border-accent text-accent bg-accent/10'
-                : 'border-border text-text-muted hover:text-text-primary'
-            }`}
-          >
-            Open
-          </a>
-          <a
-            href="/?status=CLOSED"
-            className={`px-3 py-1 rounded-chip text-xs font-mono border transition-all duration-150 ${
-              isClosedView
-                ? 'border-border text-text-muted bg-tag-bg'
-                : 'border-border text-text-muted hover:text-text-primary'
-            }`}
-          >
-            Closed
-          </a>
-        </div>
+        <StatusToggle />
 
         <FilterBar />
       </div>

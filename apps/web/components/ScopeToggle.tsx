@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { motion } from 'framer-motion'
 
 const TABS = [
   { value: 'all',    label: 'All' },
@@ -19,25 +20,34 @@ export function ScopeToggle() {
     const params = new URLSearchParams(searchParams.toString())
     if (value === 'all') params.delete('scope')
     else params.set('scope', value)
-    router.push(`${pathname}?${params.toString()}`)
+    params.delete('page')
+    router.push(`${pathname}?${params.toString()}`, { scroll: false })
   }
 
   return (
-    <div className="flex items-center gap-1 bg-card border border-border rounded-card p-1">
-      {TABS.map((tab) => (
-        <button
-          key={tab.value}
-          onClick={() => handleTab(tab.value)}
-          className={cn(
-            'px-4 py-1.5 rounded-[6px] text-sm font-mono transition-all duration-[120ms]',
-            current === tab.value
-              ? 'bg-tag-bg text-text-primary border border-border'
-              : 'text-text-muted hover:text-text-primary'
-          )}
-        >
-          {tab.label}
-        </button>
-      ))}
+    <div className="relative flex items-center bg-card border border-border rounded-card p-1">
+      {TABS.map((tab) => {
+        const isActive = current === tab.value
+        return (
+          <button
+            key={tab.value}
+            onClick={() => handleTab(tab.value)}
+            className={cn(
+              'relative px-4 py-1.5 z-10 text-sm font-mono transition-colors duration-300',
+              isActive ? 'text-text-primary' : 'text-text-muted hover:text-text-primary'
+            )}
+          >
+            {isActive && (
+              <motion.div
+                layoutId="active-pill"
+                className="absolute inset-0 bg-tag-bg border border-border rounded-[6px] z-[-1]"
+                transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+              />
+            )}
+            {tab.label}
+          </button>
+        )
+      })}
     </div>
   )
 }

@@ -58,6 +58,7 @@ model User {
   id        String     @id @default(uuid())
   email     String     @unique
   name      String
+  password  String?
   avatarUrl String?
   role      UserRole   @default(VISITOR)
   provider  Provider
@@ -170,6 +171,7 @@ enum Source {
   STARTUP_INDIA
   HACK2SKILL
   HACKERRANK
+  LUMA
   TOPLANG
   MANUAL
 }
@@ -200,6 +202,7 @@ enum UserRole {
 enum Provider {
   GOOGLE
   GITHUB
+  CREDENTIALS
 }
 
 enum SubmissionStatus {

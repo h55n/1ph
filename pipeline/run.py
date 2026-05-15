@@ -16,6 +16,7 @@ from pipeline.core.normalizer import normalize
 from pipeline.core.quality_gate import run as quality_gate
 from pipeline.core.tier_engine import assign_tiers
 from pipeline.core.status_sweep import run_sweep
+from pipeline.core.enrichment import run_enrichment
 from pipeline.db.client import get_client, upsert_hackathons, log_pipeline_run
 from pipeline.logger import run_logger as log
 
@@ -89,7 +90,14 @@ def main():
             error_log=result.error,
         )
 
-    # ── 6. Status Sweep ───────────────────────────────────────────────
+    # ── 6. AI Enrichment ──────────────────────────────────────────────
+    print("\n" + "="*60)
+    print("  PHASE 6: AI ENRICHMENT (Mistral)")
+    print("="*60)
+    enrich_summary = run_enrichment(client)
+    print(f"  Enrichment: {enrich_summary}")
+
+    # ── 7. Status Sweep ───────────────────────────────────────────────
     sweep_summary = run_sweep(client)
     log.sweep_result(sweep_summary)
 

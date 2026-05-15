@@ -3,10 +3,12 @@ import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import { PrestigeBadge } from './PrestigeBadge'
 import { StatusChip } from './StatusChip'
+import { BookmarkButton } from './BookmarkButton'
 import { formatDeadline, formatPrize, formatFee } from '@/lib/formatters'
 
 interface HackathonCardProps {
   hackathon: {
+    id: string
     slug: string
     title: string
     organizerName: string
@@ -25,6 +27,7 @@ interface HackathonCardProps {
     description?: string | null
   }
   index?: number
+  isBookmarked?: boolean
 }
 
 const MODE_LABEL: Record<string, string> = {
@@ -54,7 +57,7 @@ function safeTag(tag: string): string {
   return tag.trim()
 }
 
-export function HackathonCard({ hackathon, index = 0 }: HackathonCardProps) {
+export function HackathonCard({ hackathon, index = 0, isBookmarked = false }: HackathonCardProps) {
   const isClosed = hackathon.status === 'CLOSED'
   const deadline = formatDeadline(hackathon.registrationClose)
 
@@ -65,40 +68,41 @@ export function HackathonCard({ hackathon, index = 0 }: HackathonCardProps) {
     .slice(0, 2)
 
   return (
-    <Link
-      href={`/hackathon/${hackathon.slug}`}
+    <div
       className={cn(
-        'group block bg-card border border-border rounded-card p-5',
-        'transition-all duration-150 ease-out',
-        'hover:-translate-y-0.5 hover:border-l-2 hover:border-l-accent hover:shadow-lg',
+        'group relative block bg-card border border-border rounded-card p-5',
+        'transition-all duration-500 ease-effortless',
+        'hover:-translate-y-1 hover:border-l-2 hover:border-l-accent hover:shadow-2xl hover:bg-card/80',
         isClosed && 'opacity-60 pointer-events-none',
         'opacity-0 animate-fade-in'
       )}
-      style={{ animationDelay: `${Math.min(index, 7) * 40}ms` }}
-      aria-label={`${hackathon.title} by ${hackathon.organizerName}`}
+      style={{ animationDelay: `${Math.min(index, 7) * 100}ms` }}
     >
+      <Link
+        href={`/hackathon/${hackathon.slug}`}
+        className="absolute inset-0 z-0"
+        aria-label={`${hackathon.title} by ${hackathon.organizerName}`}
+      />
       {/* Top row: org + scope + tier */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="relative z-10 flex items-center justify-between mb-3 pointer-events-none">
         <div className="flex items-center gap-2 min-w-0">
           {hackathon.organizerLogoUrl ? (
             <Image
               src={hackathon.organizerLogoUrl}
-              alt={`${hackathon.organizerName} logo`}
-              width={24}
-              height={24}
-              className="w-6 h-6 rounded-sm object-contain flex-shrink-0"
+              alt={hackathon.organizerName}
+              width={20}
+              height={20}
+              className="rounded-full grayscale group-hover:grayscale-0 transition-all duration-500"
             />
           ) : (
-            <div className="w-6 h-6 rounded-sm bg-tag-bg flex items-center justify-center flex-shrink-0">
-              <span className="text-accent text-xs font-mono font-bold">
-                {hackathon.organizerName.charAt(0).toUpperCase()}
-              </span>
+            <div className="w-5 h-5 bg-tag-bg rounded-full flex items-center justify-center text-[10px] font-bold">
+              {hackathon.organizerName[0]}
             </div>
           )}
           <span className="text-text-muted text-xs font-mono truncate">{hackathon.organizerName}</span>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0 pointer-events-auto">
           <span
             className="text-sm"
             aria-label={hackathon.scope === 'GLOBAL' ? 'Global hackathon' : 'India hackathon'}
@@ -106,13 +110,14 @@ export function HackathonCard({ hackathon, index = 0 }: HackathonCardProps) {
             {hackathon.scope === 'GLOBAL' ? '🌐' : '🇮🇳'}
           </span>
           <PrestigeBadge tier={hackathon.prestigeTier} />
+          <BookmarkButton hackathonId={hackathon.id} initialBookmarked={isBookmarked} />
         </div>
       </div>
 
       {/* Title */}
-      <h2 className="font-serif text-lg leading-tight text-text-primary mb-2 line-clamp-2">
+      <h3 className="relative z-10 text-lg font-serif text-text-primary leading-tight mb-4 group-hover:text-accent transition-colors duration-500 line-clamp-2 min-h-[3.5rem]">
         {hackathon.title}
-      </h2>
+      </h3>
 
       {/* Description preview */}
       {hackathon.description && (
@@ -169,6 +174,6 @@ export function HackathonCard({ hackathon, index = 0 }: HackathonCardProps) {
           </span>
         ))}
       </div>
-    </Link>
+    </div>
   )
 }

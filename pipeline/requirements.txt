@@ -5,3 +5,4 @@ supabase==2.5.3
 tenacity==8.3.0
 python-dotenv==1.0.1
 python-Levenshtein==0.25.1
+# enrichment.py uses Mistral REST API via httpx (no SDK needed)

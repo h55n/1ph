@@ -141,6 +141,26 @@ def normalize(raw: RawHackathon) -> Optional[dict]:
     # Sanitize theme tags — remove raw JSON/dict objects
     clean_tags = _sanitize_tags(raw.theme_tags)
 
+    # Automatically extract tags from title/description if they are missing
+    text = (raw.title + " " + (raw.description or "")).lower()
+    auto_tags = {
+        "AI/ML":      ["ai", "ml", "artificial intelligence", "machine learning", "deep learning", "nlp"],
+        "Web3":       ["web3", "crypto", "blockchain", "ethereum", "solana", "nft", "dao"],
+        "Fintech":    ["fintech", "finance", "banking", "payment", "trading"],
+        "Health":     ["health", "medtech", "healthcare", "medical", "fitness"],
+        "Gaming":     ["gaming", "game", "unity", "unreal", "metaspace"],
+        "Social Impact": ["social impact", "sustainability", "climate", "environment", "green"],
+        "EdTech":     ["edtech", "education", "learning", "teaching", "school"],
+        "Open":       ["open", "general", "any"],
+        "Hardware":   ["hardware", "iot", "robotics", "embedded", "arduino", "raspberry pi"],
+    }
+    
+    current_tags_lower = {t.lower() for t in clean_tags}
+    for theme, keywords in auto_tags.items():
+        if any(kw in text for kw in keywords):
+            if theme.lower() not in current_tags_lower:
+                clean_tags.append(theme)
+
     return {
         "id": uid,
         "title": raw.title.strip()[:255],

@@ -48,12 +48,17 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${dmSerifDisplay.variable} ${jetbrainsMono.variable} ${inter.variable}`}>
-      <body className="bg-bg text-text-primary font-sans antialiased min-h-screen">
+      <body className="bg-bg text-text-primary font-sans antialiased min-h-screen flex flex-col">
         <Providers>
           <Header />
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+          <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16 w-full">
             {children}
           </main>
+          <footer className="py-12 border-t border-border/50 text-center">
+            <p className="text-[10px] font-mono text-text-muted tracking-widest uppercase opacity-50">
+              Made with <span className="text-accent">❤</span> by hssn
+            </p>
+          </footer>
         </Providers>
       </body>
     </html>

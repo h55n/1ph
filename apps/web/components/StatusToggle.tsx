@@ -1,12 +1,14 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { useTransition } from 'react'
 import { cn } from '@/lib/utils'
 
 export function StatusToggle() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [isPending, startTransition] = useTransition()
   const isClosedView = searchParams.get('status') === 'CLOSED'
 
   function toggle(closed: boolean) {
@@ -17,7 +19,9 @@ export function StatusToggle() {
       params.delete('status')
     }
     params.delete('page') // Reset pagination on status change
-    router.push(`${pathname}?${params.toString()}`, { scroll: false })
+    startTransition(() => {
+      router.push(`${pathname}?${params.toString()}`, { scroll: false })
+    })
   }
 
   return (

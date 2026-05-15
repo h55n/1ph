@@ -56,6 +56,7 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
       "Social Impact": ["social impact", "sustainability", "climate", "environment"],
       "EdTech": ["edtech", "education", "learning"],
       "Hardware": ["hardware", "iot", "robotics"],
+      "Open": ["open", "all", "general"],
     }
     const keywords = themeMap[theme] || [theme]
     const themeConditions: Prisma.HackathonWhereInput[] = [
@@ -70,8 +71,8 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
   if (mode) andArr.push({ mode: mode as 'ONLINE' | 'OFFLINE' | 'HYBRID' })
   if (eligibility) andArr.push({ eligibility: eligibility as 'STUDENTS' | 'OPEN' | 'PROFESSIONALS' })
   if (duration) andArr.push({ durationType: duration as 'HR24' | 'HR48' | 'WEEK' | 'MONTH' | 'CUSTOM' })
-  if (fee === 'free') andArr.push({ entryFee: null })
-  if (fee === 'paid') andArr.push({ entryFee: { not: null } })
+  if (fee === 'free') andArr.push({ OR: [{ entryFee: null }, { entryFee: 0 }] })
+  if (fee === 'paid') andArr.push({ entryFee: { gt: 0 } })
   if (team === 'solo') andArr.push({ teamSizeMax: 1 })
   if (team === '2-4') andArr.push({ AND: [{ teamSizeMin: { lte: 4 } }, { teamSizeMax: { gte: 2 } }] })
 

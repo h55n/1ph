@@ -68,7 +68,10 @@ export function HackathonCard({ hackathon, index = 0, isBookmarked = false }: Ha
     .slice(0, 2)
 
   return (
-    <div
+    <Link
+      href={`/hackathon/${hackathon.slug}`}
+      aria-label={`${hackathon.title} by ${hackathon.organizerName}`}
+      prefetch={true}
       className={cn(
         'group relative block bg-card border border-border rounded-card p-5',
         'transition-all duration-500 ease-effortless',
@@ -78,13 +81,8 @@ export function HackathonCard({ hackathon, index = 0, isBookmarked = false }: Ha
       )}
       style={{ animationDelay: `${Math.min(index, 7) * 100}ms` }}
     >
-      <Link
-        href={`/hackathon/${hackathon.slug}`}
-        className="absolute inset-0 z-0"
-        aria-label={`${hackathon.title} by ${hackathon.organizerName}`}
-      />
       {/* Top row: org + scope + tier */}
-      <div className="relative z-10 flex items-center justify-between mb-3 pointer-events-none">
+      <div className="relative z-10 flex items-center justify-between mb-3">
         <div className="flex items-center gap-2 min-w-0">
           {hackathon.organizerLogoUrl ? (
             <Image
@@ -102,7 +100,7 @@ export function HackathonCard({ hackathon, index = 0, isBookmarked = false }: Ha
           <span className="text-text-muted text-xs font-mono truncate">{hackathon.organizerName}</span>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0 pointer-events-auto">
+        <div className="flex items-center gap-2 flex-shrink-0 relative z-20">
           <span
             className="text-sm"
             aria-label={hackathon.scope === 'GLOBAL' ? 'Global hackathon' : 'India hackathon'}
@@ -174,6 +172,6 @@ export function HackathonCard({ hackathon, index = 0, isBookmarked = false }: Ha
           </span>
         ))}
       </div>
-    </div>
+    </Link>
   )
 }

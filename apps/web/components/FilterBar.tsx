@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
 
 const FILTERS = [
@@ -31,14 +31,17 @@ export function FilterBar() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
 
   function setParam(key: string, value: string | null) {
     const params = new URLSearchParams(searchParams.toString())
     if (value === null || value === searchParams.get(key)) params.delete(key)
     else params.set(key, value)
     params.delete('page') // Reset pagination on filter change
-    router.push(`${pathname}?${params.toString()}`)
     setOpenDropdown(null)
+    startTransition(() => {
+      router.push(`${pathname}?${params.toString()}`, { scroll: false })
+    })
   }
 
   return (

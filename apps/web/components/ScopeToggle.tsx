@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { useTransition } from 'react'
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
 
@@ -14,6 +15,7 @@ export function ScopeToggle() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [isPending, startTransition] = useTransition()
   const current = searchParams.get('scope') ?? 'all'
 
   function handleTab(value: string) {
@@ -21,7 +23,9 @@ export function ScopeToggle() {
     if (value === 'all') params.delete('scope')
     else params.set('scope', value)
     params.delete('page')
-    router.push(`${pathname}?${params.toString()}`, { scroll: false })
+    startTransition(() => {
+      router.push(`${pathname}?${params.toString()}`, { scroll: false })
+    })
   }
 
   return (

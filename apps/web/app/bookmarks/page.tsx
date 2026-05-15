@@ -15,7 +15,7 @@ export default async function BookmarksPage() {
     include: {
       hackathon: {
         select: {
-          slug: true, title: true, organizerName: true, organizerLogoUrl: true,
+          id: true, slug: true, title: true, organizerName: true, organizerLogoUrl: true,
           prestigeTier: true, status: true, prizePool: true, prizeCurrency: true,
           prizeDescription: true, entryFee: true, entryFeeCurrency: true,
           registrationClose: true, mode: true, themeTags: true, scope: true,
@@ -48,6 +48,7 @@ export default async function BookmarksPage() {
                 entryFee: hackathon.entryFee ? Number(hackathon.entryFee) : null,
               }}
               index={i}
+              isBookmarked={true}
             />
           ))}
         </div>

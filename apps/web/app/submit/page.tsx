@@ -1,4 +1,52 @@
+'use client'
+
+import { useState } from 'react'
+import { submitHackathon } from './actions'
+
 export default function SubmitPage() {
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    const formData = new FormData(e.currentTarget)
+    
+    try {
+      const res = await submitHackathon(formData)
+      if (res?.error) {
+        setError(res.error)
+      } else {
+        setSuccess(true)
+      }
+    } catch (err) {
+      setError('An unexpected error occurred.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (success) {
+    return (
+      <div className="max-w-xl mx-auto pt-20 text-center space-y-4">
+        <div className="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-6">
+          <span className="text-2xl">🎉</span>
+        </div>
+        <h1 className="font-serif text-4xl text-text-primary">Submission Received!</h1>
+        <p className="font-sans text-text-muted text-sm leading-relaxed">
+          Thanks for adding to 1ph. Our team will review your hackathon shortly.
+        </p>
+        <div className="pt-8">
+          <a href="/" className="px-6 py-2 bg-accent text-background rounded-card font-mono text-sm hover:bg-accent/90 transition-colors">
+            Back to Home
+          </a>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-xl mx-auto pt-12 space-y-8">
       <div>
@@ -10,12 +58,12 @@ export default function SubmitPage() {
       </div>
 
       <div className="bg-card border border-border rounded-card p-6">
-        <form action="https://formsubmit.co/hassan0rehman@gmail.com" method="POST" className="space-y-4">
-          {/* FormSubmit configurations */}
-          <input type="hidden" name="_subject" value="New Hackathon Submission - 1ph" />
-          <input type="hidden" name="_captcha" value="false" />
-          <input type="hidden" name="_next" value="https://1ph.vercel.app/" />
-
+        {error && (
+          <div className="mb-4 p-3 rounded bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
+            {error}
+          </div>
+        )}
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block font-mono text-xs text-text-muted mb-1" htmlFor="orgName">Organizer Name *</label>
             <input required type="text" id="orgName" name="Organizer Name" placeholder="e.g. MLH" className="w-full bg-bg border border-border rounded-chip px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent" />
@@ -43,9 +91,10 @@ export default function SubmitPage() {
 
           <button
             type="submit"
-            className="w-full py-3 mt-4 rounded-card bg-accent text-bg font-mono font-medium text-center text-sm hover:bg-accent/90 transition-colors duration-150"
+            disabled={loading}
+            className="w-full py-3 mt-4 rounded-card bg-accent text-bg font-mono font-medium text-center text-sm hover:bg-accent/90 transition-colors duration-150 disabled:opacity-50"
           >
-            Submit Hackathon →
+            {loading ? 'Submitting...' : 'Submit Hackathon →'}
           </button>
         </form>
       </div>

@@ -128,7 +128,7 @@ class DoraHacksConnector(BaseConnector):
                             print(f"[{self.SOURCE}] Found {len(cards)} cards with: {sel}")
                             break
 
-                    if True:
+                    if not cards:
                         print(f"[{self.SOURCE}] Fallback to link scraping")
                         links = page.query_selector_all("a[href*='/hackathon/']")
                         seen: set = set()

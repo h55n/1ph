@@ -1,16 +1,23 @@
 'use client'
 
 import { useState } from 'react'
-import { useSession, signIn } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 export function BookmarkButton({ hackathonId, initialBookmarked = false }: { hackathonId: string; initialBookmarked?: boolean }) {
   const { data: session } = useSession()
+  const router = useRouter()
   const [bookmarked, setBookmarked] = useState(initialBookmarked)
   const [loading, setLoading] = useState(false)
 
-  async function toggle() {
-    if (!session) { signIn(); return }
+  async function toggle(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!session) { 
+      router.push(`/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`)
+      return 
+    }
     setLoading(true)
     const prev = bookmarked
     setBookmarked(!prev)

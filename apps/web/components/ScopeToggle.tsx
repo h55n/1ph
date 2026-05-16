@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useTransition } from 'react'
+import { useTransition, useOptimistic } from 'react'
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
 
@@ -16,9 +16,14 @@ export function ScopeToggle() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
-  const current = searchParams.get('scope') ?? 'all'
+  const currentParam = searchParams.get('scope') ?? 'all'
+  const [optimisticScope, setOptimisticScope] = useOptimistic(
+    currentParam,
+    (_state, newScope: string) => newScope
+  )
 
   function handleTab(value: string) {
+    setOptimisticScope(value)
     const params = new URLSearchParams(searchParams.toString())
     if (value === 'all') params.delete('scope')
     else params.set('scope', value)
@@ -31,7 +36,7 @@ export function ScopeToggle() {
   return (
     <div className="relative flex items-center bg-card border border-border rounded-card p-1">
       {TABS.map((tab) => {
-        const isActive = current === tab.value
+        const isActive = optimisticScope === tab.value
         return (
           <button
             key={tab.value}

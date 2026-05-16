@@ -30,34 +30,20 @@ MAX_ENRICH_PER_RUN = 25  # Don't burn too many API calls per pipeline run
 
 
 def _fetch_page_text(url: str) -> str | None:
-    """Fetch the URL and return clean body text (no HTML)."""
+    """Fetch the URL via Jina Reader API to bypass JS and return clean markdown."""
     try:
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-            ),
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        }
-        with httpx.Client(timeout=20, follow_redirects=True, headers=headers) as client:
-            r = client.get(url)
+        jina_url = f"https://r.jina.ai/{url}"
+        with httpx.Client(timeout=30, follow_redirects=True) as client:
+            r = client.get(jina_url)
             if r.status_code >= 400:
-                print(f"[enrichment] HTTP {r.status_code} for {url}")
+                print(f"[enrichment] HTTP {r.status_code} from Jina for {url}")
                 return None
-            soup = BeautifulSoup(r.text, "html.parser")
-
-            # Remove script/style/nav/header/footer noise
-            for tag in soup(["script", "style", "nav", "header", "footer", "noscript", "svg", "img"]):
-                tag.decompose()
-
-            text = soup.get_text(separator="\n", strip=True)
-            # Collapse whitespace
-            lines = [line.strip() for line in text.splitlines() if line.strip()]
-            clean = "\n".join(lines)
-            # Cap at ~6000 chars to stay within context window
-            return clean[:6000] if clean else None
+            
+            clean = r.text
+            # Cap at ~12000 chars to stay within Mistral context window
+            return clean[:12000] if clean else None
     except Exception as e:
-        print(f"[enrichment] Failed to fetch {url}: {e}")
+        print(f"[enrichment] Failed to fetch {url} via Jina: {e}")
         return None
 
 

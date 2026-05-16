@@ -46,6 +46,7 @@ model Hackathon {
   updatedAt         DateTime     @updatedAt
   lastSyncedAt      DateTime?
   bookmarks         Bookmark[]
+  registrations     Registration[]
 
   @@unique([source, sourceId])
   @@index([status])
@@ -64,11 +65,23 @@ model User {
   provider  Provider
   createdAt DateTime   @default(now())
   accounts  Account[]
-  bookmarks Bookmark[]
-  sessions  Session[]
+  bookmarks     Bookmark[]
+  registrations Registration[]
+  sessions      Session[]
 }
 
 model Bookmark {
+  id          String    @id @default(uuid())
+  userId      String
+  hackathonId String
+  createdAt   DateTime  @default(now())
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, hackathonId])
+}
+
+model Registration {
   id          String    @id @default(uuid())
   userId      String
   hackathonId String

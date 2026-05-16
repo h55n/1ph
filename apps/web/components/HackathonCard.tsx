@@ -133,11 +133,11 @@ export function HackathonCard({ hackathon, index = 0, isBookmarked = false, isRe
         {!isClosed && (
           <span
             className="text-xs font-mono text-text-muted"
-            title={new Date(hackathon.registrationClose).toLocaleDateString('en-IN', {
+            title={hackathon.registrationClose ? new Date(hackathon.registrationClose).toLocaleDateString('en-IN', {
               day: 'numeric',
               month: 'short',
               year: 'numeric',
-            })}
+            }) : 'Date TBA'}
           >
             {deadline}
           </span>

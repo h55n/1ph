@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { redirect } from 'next/navigation'
-import { HackathonCard } from '@/components/HackathonCard'
+import { VisualCalendar } from '@/components/VisualCalendar'
 
 export const revalidate = 0
 
@@ -21,7 +21,7 @@ export default async function CalendarPage() {
           id: true, slug: true, title: true, organizerName: true, organizerLogoUrl: true,
           prestigeTier: true, status: true, prizePool: true, prizeCurrency: true,
           prizeDescription: true, entryFee: true, entryFeeCurrency: true,
-          registrationClose: true, mode: true, themeTags: true, scope: true,
+          registrationClose: true, eventStart: true, eventEnd: true, mode: true, themeTags: true, scope: true,
           description: true,
         }
       }
@@ -63,25 +63,16 @@ export default async function CalendarPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {registrations.map((reg, i) => {
-          const h = reg.hackathon
-          return (
-            <HackathonCard
-              key={h.id}
-              hackathon={{
-                ...h,
-                prizePool: h.prizePool ? Number(h.prizePool) : null,
-                entryFee: h.entryFee ? Number(h.entryFee) : null,
-                registrationClose: h.registrationClose,
-              }}
-              index={i}
-              isRegistered={true}
-              isBookmarked={bookmarkedIds.has(h.id)}
-            />
-          )
-        })}
-      </div>
+      <VisualCalendar
+        events={registrations.map(reg => ({
+          ...reg.hackathon,
+          prizePool: reg.hackathon.prizePool ? Number(reg.hackathon.prizePool) : null,
+          entryFee: reg.hackathon.entryFee ? Number(reg.hackathon.entryFee) : null,
+          eventStart: reg.hackathon.eventStart,
+          eventEnd: reg.hackathon.eventEnd,
+          registrationClose: reg.hackathon.registrationClose
+        }))}
+      />
     </div>
   )
 }

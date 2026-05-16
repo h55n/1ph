@@ -53,3 +53,6 @@ Thumbs.db
 .env.vercel
 tmp/env_backups/
 
+# Local only logs
+change_log.md
+

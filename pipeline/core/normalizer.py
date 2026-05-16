@@ -29,8 +29,6 @@ def _parse_date(val: Optional[str]) -> Optional[str]:
     if not val:
         return None
     val = str(val).strip()
-    if val == "2099-12-31":
-        return val
 
     iso_val = f"{val[:-1]}+00:00" if val.endswith("Z") else val
     try:
@@ -128,8 +126,8 @@ def normalize(raw: RawHackathon) -> Optional[dict]:
     slug = _slugify(raw.title, uid)
 
     reg_close = _parse_date(raw.registration_close)
-    if not reg_close:
-        return None
+    # Allow missing registration_close, status_sweep will handle it as OPEN
+
 
     mode = raw.mode.upper() if raw.mode and raw.mode.upper() in VALID_MODES else "ONLINE"
     eligibility = raw.eligibility.upper() if raw.eligibility and raw.eligibility.upper() in VALID_ELIGIBILITY else "OPEN"
@@ -182,7 +180,7 @@ def normalize(raw: RawHackathon) -> Optional[dict]:
         "prize_description": raw.prize_description,
         "registration_open": _to_timestamp(_parse_date(raw.registration_open)),
         "registration_close": _to_timestamp(reg_close),
-        "event_start": _to_timestamp(_parse_date(raw.event_start) or reg_close),
+        "event_start": _to_timestamp(_parse_date(raw.event_start)),
         "event_end": _to_timestamp(_parse_date(raw.event_end)),
         "apply_url": raw.apply_url.strip(),
         "source": raw.__class__.__module__.split(".")[-1].upper(),  # overridden by run.py

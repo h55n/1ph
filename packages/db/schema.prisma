@@ -28,8 +28,8 @@ model Hackathon {
   prizeCurrency     String?      @default("USD")
   prizeDescription  String?
   registrationOpen  DateTime?
-  registrationClose DateTime
-  eventStart        DateTime
+  registrationClose DateTime?
+  eventStart        DateTime?
   eventEnd          DateTime?
   applyUrl          String
   source            Source

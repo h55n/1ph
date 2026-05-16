@@ -30,8 +30,14 @@ function LoginContent() {
         })
 
         if (!res.ok) {
-          const data = await res.json()
-          throw new Error(data.error || 'Failed to register')
+          let errorMsg = 'Failed to register'
+          try {
+            const data = await res.json()
+            errorMsg = data.error || errorMsg
+          } catch {
+            // response was not JSON
+          }
+          throw new Error(errorMsg)
         }
 
         // Successfully registered, now sign in

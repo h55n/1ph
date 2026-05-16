@@ -3,13 +3,15 @@
 import { signIn } from 'next-auth/react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Suspense, useState } from 'react'
+import { motion } from 'framer-motion'
+import { cn } from '@/lib/utils'
 
 function LoginContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const callbackUrl = searchParams.get('callbackUrl') ?? '/'
   
-  const [isRegistering, setIsRegistering] = useState(false)
+  const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -21,7 +23,7 @@ function LoginContent() {
     setError(null)
     setLoading(true)
 
-    if (isRegistering) {
+    if (activeTab === 'signup') {
       try {
         const res = await fetch('/api/register', {
           method: 'POST',
@@ -82,33 +84,69 @@ function LoginContent() {
 
   return (
     <div className="max-w-sm mx-auto pt-20 space-y-6">
-      <div className="text-center">
+      <div className="text-center mb-8">
         <h1 className="font-serif text-3xl text-text-primary mb-2">
-          {isRegistering ? 'Create Account' : 'Welcome back.'}
+          {activeTab === 'signup' ? 'Create Account' : 'Welcome back.'}
         </h1>
         <p className="font-mono text-sm text-text-muted">
-          {isRegistering ? 'Sign up to save hackathons.' : 'Sign in to save hackathons.'}
+          {activeTab === 'signup' ? 'Sign up to save hackathons.' : 'Sign in to save hackathons.'}
         </p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex bg-card border border-border p-1 rounded-card mb-4 relative">
+        <button
+          onClick={() => { setActiveTab('login'); setError(null) }}
+          className={cn(
+            'flex-1 relative z-10 py-2 text-sm font-mono transition-colors duration-300',
+            activeTab === 'login' ? 'text-text-primary' : 'text-text-muted hover:text-text-primary'
+          )}
+        >
+          {activeTab === 'login' && (
+            <motion.div
+              layoutId="login-tab-pill"
+              className="absolute inset-0 bg-tag-bg border border-border rounded-md z-[-1]"
+              transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+            />
+          )}
+          Sign In
+        </button>
+        <button
+          onClick={() => { setActiveTab('signup'); setError(null) }}
+          className={cn(
+            'flex-1 relative z-10 py-2 text-sm font-mono transition-colors duration-300',
+            activeTab === 'signup' ? 'text-text-primary' : 'text-text-muted hover:text-text-primary'
+          )}
+        >
+          {activeTab === 'signup' && (
+            <motion.div
+              layoutId="login-tab-pill"
+              className="absolute inset-0 bg-tag-bg border border-border rounded-md z-[-1]"
+              transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+            />
+          )}
+          Sign Up
+        </button>
       </div>
 
       <div className="bg-card border border-border rounded-card p-6 space-y-4">
         
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="p-3 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-md">
+            <div className="p-3 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-md animate-fade-in">
               {error}
             </div>
           )}
 
-          {isRegistering && (
-            <div>
+          {activeTab === 'signup' && (
+            <div className="animate-fade-in">
               <label className="block font-mono text-xs text-text-muted mb-1">Name</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+                className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none transition-colors"
                 placeholder="Ada Lovelace"
               />
             </div>
@@ -121,7 +159,7 @@ function LoginContent() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+              className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none transition-colors"
               placeholder="you@example.com"
             />
           </div>
@@ -133,7 +171,7 @@ function LoginContent() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+              className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none transition-colors"
               placeholder="••••••••"
             />
           </div>
@@ -141,9 +179,9 @@ function LoginContent() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-accent text-background font-mono text-sm font-bold py-2.5 rounded-md hover:bg-accent/90 transition-colors disabled:opacity-50"
+            className="w-full bg-accent text-background font-mono text-sm font-bold py-2.5 rounded-md hover:bg-accent/90 transition-all active:scale-95 disabled:opacity-50"
           >
-            {loading ? 'Please wait...' : (isRegistering ? 'Sign Up' : 'Sign In')}
+            {loading ? 'Please wait...' : (activeTab === 'signup' ? 'Create Account' : 'Sign In')}
           </button>
         </form>
 
@@ -181,17 +219,6 @@ function LoginContent() {
           </button>
         </div>
       </div>
-
-      <p className="font-mono text-xs text-text-muted text-center">
-        {isRegistering ? 'Already have an account?' : 'Don\'t have an account?'}
-        {' '}
-        <button 
-          onClick={() => setIsRegistering(!isRegistering)}
-          className="text-accent hover:underline"
-        >
-          {isRegistering ? 'Sign in' : 'Create one'}
-        </button>
-      </p>
 
       <p className="font-mono text-xs text-text-muted text-center pt-4">
         Browsing is always free. No login needed to find hackathons.

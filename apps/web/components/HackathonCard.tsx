@@ -21,7 +21,7 @@ interface HackathonCardProps {
     prizeDescription?: string | null
     entryFee?: number | null
     entryFeeCurrency?: string | null
-    registrationClose: Date | string
+    registrationClose: Date | string | null
     mode: 'ONLINE' | 'OFFLINE' | 'HYBRID'
     themeTags: string[]
     scope: 'GLOBAL' | 'INDIA'
@@ -149,7 +149,7 @@ export function HackathonCard({ hackathon, index = 0, isBookmarked = false, isRe
         <div className="flex flex-col gap-0.5">
           <span className="text-text-muted">Prize</span>
           <span className="text-text-primary font-medium">
-            {hackathon.prizeDescription ?? formatPrize(hackathon.prizePool, hackathon.prizeCurrency)}
+            {hackathon.prizeDescription || formatPrize(hackathon.prizePool, hackathon.prizeCurrency)}
           </span>
         </div>
         <div className="w-px h-6 bg-border" />

@@ -1,8 +1,9 @@
 import { formatDistanceToNowStrict } from 'date-fns'
 
-export function formatDeadline(date: Date | string): string {
+export function formatDeadline(date: Date | string | null | undefined): string {
+  if (!date) return 'Date TBA'
   const d = typeof date === 'string' ? new Date(date) : date
-  if (isNaN(d.getTime())) return '—'
+  if (isNaN(d.getTime())) return 'Date TBA'
   if (d.getFullYear() >= 2099) return 'Ongoing'
   const now = new Date()
   if (d < now) return 'Closed'
@@ -13,7 +14,7 @@ export function formatDeadline(date: Date | string): string {
 }
 
 export function formatPrize(pool: number | null | undefined, currency: string | null | undefined): string {
-  if (!pool) return 'No prize listed'
+  if (!pool || pool === 0) return 'TBA'
   const c = currency?.toUpperCase() ?? 'USD'
   if (c === 'INR') {
     if (pool >= 100000) return `₹${(pool / 100000).toFixed(pool % 100000 === 0 ? 0 : 1)}L`

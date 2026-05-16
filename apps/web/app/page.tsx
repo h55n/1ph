@@ -115,20 +115,41 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
         prestigeTier: true, status: true, prizePool: true, prizeCurrency: true,
         prizeDescription: true, entryFee: true, entryFeeCurrency: true,
         registrationClose: true, mode: true, themeTags: true, scope: true,
-        description: true,
+        description: true, source: true,
       },
     }),
     prisma.hackathon.count({ where }),
   ])
 
-  const hackathons = hackathonsSettled.status === 'fulfilled' ? hackathonsSettled.value : []
+  const hackathonsRaw = hackathonsSettled.status === 'fulfilled' ? hackathonsSettled.value : []
   const total = totalSettled.status === 'fulfilled' ? totalSettled.value : 0
 
   if (hackathonsSettled.status === 'rejected') {
     console.error('Failed to query hackathons:', hackathonsSettled.reason)
   }
 
-  if (hackathons.length === 0) {
+  // Interleave by source to prevent clustering (e.g., all Unstop then all Devfolio)
+  const interleaved: typeof hackathonsRaw = []
+  if (hackathonsRaw.length > 0) {
+    const groups: Record<string, typeof hackathonsRaw> = {}
+    hackathonsRaw.forEach(h => {
+      if (!groups[h.source]) groups[h.source] = []
+      groups[h.source].push(h)
+    })
+    
+    const sources = Object.keys(groups)
+    let maxLen = Math.max(...sources.map(s => groups[s].length))
+    
+    for (let i = 0; i < maxLen; i++) {
+      for (const s of sources) {
+        if (groups[s][i]) {
+          interleaved.push(groups[s][i])
+        }
+      }
+    }
+  }
+
+  if (interleaved.length === 0) {
     return (
       <div className="text-center py-20">
         <p className="font-serif text-2xl text-text-muted mb-2">No hackathons found.</p>
@@ -143,14 +164,14 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
         {total} hackathon{total !== 1 ? 's' : ''} found
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {hackathons.map((h, i) => (
+        {interleaved.map((h, i) => (
           <HackathonCard
-            key={h.slug}
+            key={h.id}
             hackathon={{
               ...h,
               prizePool: h.prizePool ? Number(h.prizePool) : null,
               entryFee: h.entryFee ? Number(h.entryFee) : null,
-              registrationClose: h.registrationClose,
+              registrationClose: h.registrationClose ?? '',
             }}
             index={i}
           />

@@ -110,7 +110,7 @@ class UnstopConnector(BaseConnector):
                                     title=title,
                                     organizer_name="Unstop",
                                     apply_url=apply_url,
-                                    registration_close="2099-12-31",
+                                    registration_close=None,
                                     mode="ONLINE",
                                     scope="INDIA",
                                 ))
@@ -161,7 +161,7 @@ class UnstopConnector(BaseConnector):
                                     title=title,
                                     organizer_name=org,
                                     apply_url=apply_url,
-                                    registration_close="2099-12-31",
+                                    registration_close=None,
                                     prize_pool=prize,
                                     prize_currency="INR",
                                     theme_tags=tags,

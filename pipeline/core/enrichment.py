@@ -142,10 +142,10 @@ def run_enrichment(supabase_client) -> dict:
     # 1. Stub deadline (2099-12-31)
     # 2. OR missing/very short longDescription (< 100 chars)
     try:
-        # Fetch hackathons with stub deadlines
+        # Fetch hackathons with stub deadlines (2099) OR missing deadlines (null)
         stub_response = supabase_client.table("Hackathon").select(
             "id, title, applyUrl, registrationClose, longDescription, description, source, organizerName"
-        ).eq("registrationClose", "2099-12-31T00:00:00+00:00").limit(MAX_ENRICH_PER_RUN).execute()
+        ).or_("registrationClose.eq.2099-12-31T00:00:00+00:00,registrationClose.is.null").limit(MAX_ENRICH_PER_RUN).execute()
 
         stub_rows = stub_response.data or []
 

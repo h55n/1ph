@@ -66,7 +66,7 @@ class DevfolioConnector(BaseConnector):
                     apply_url = f"https://{slug}.devfolio.co"
 
                     close_raw = src.get("submission_deadline") or src.get("ends_at") or src.get("registration_ends_at") or ""
-                    close_date = close_raw[:10] if close_raw else "2099-12-31"
+                    close_date = close_raw[:10] if close_raw else None
 
                     prize_raw = src.get("total_prizes") or src.get("prize_amount") or 0
                     try:

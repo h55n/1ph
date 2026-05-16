@@ -149,10 +149,12 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
     }
   }
 
+  const finalHackathons = interleaved.length > 0 ? interleaved : hackathonsRaw
+
   // Debug logs for production tracking
   console.log(`[debug] hackathonsRaw: ${hackathonsRaw.length}, interleaved: ${interleaved.length}, total: ${total}, status: ${status}`)
 
-  if (interleaved.length === 0) {
+  if (finalHackathons.length === 0) {
     return (
       <div className="text-center py-20">
         <p className="font-serif text-2xl text-text-muted mb-2">No hackathons found.</p>
@@ -167,14 +169,14 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
         {total} hackathon{total !== 1 ? 's' : ''} found
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {interleaved.map((h, i) => (
+        {finalHackathons.map((h, i) => (
           <HackathonCard
             key={h.id}
             hackathon={{
               ...h,
               prizePool: h.prizePool ? Number(h.prizePool) : null,
               entryFee: h.entryFee ? Number(h.entryFee) : null,
-              registrationClose: h.registrationClose ?? '',
+              registrationClose: h.registrationClose,
             }}
             index={i}
           />

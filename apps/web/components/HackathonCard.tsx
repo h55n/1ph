@@ -78,7 +78,7 @@ export function HackathonCard({ hackathon, index = 0, isBookmarked = false, isRe
         'group relative block bg-card border border-border rounded-card p-5',
         'transition-all duration-500 ease-effortless',
         'hover:-translate-y-1 hover:border-l-2 hover:border-l-accent hover:shadow-2xl hover:bg-card/80',
-        isClosed && 'opacity-60 pointer-events-none',
+        isClosed && 'opacity-60',
         'opacity-0 animate-fade-in'
       )}
       style={{ animationDelay: `${Math.min(index, 7) * 100}ms` }}

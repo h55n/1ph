@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { PrestigeBadge } from './PrestigeBadge'
 import { StatusChip } from './StatusChip'
 import { BookmarkButton } from './BookmarkButton'
+import { RegisterButton } from './RegisterButton'
 import { formatDeadline, formatPrize, formatFee } from '@/lib/formatters'
 
 interface HackathonCardProps {
@@ -28,6 +29,7 @@ interface HackathonCardProps {
   }
   index?: number
   isBookmarked?: boolean
+  isRegistered?: boolean
 }
 
 const MODE_LABEL: Record<string, string> = {
@@ -57,7 +59,7 @@ function safeTag(tag: string): string {
   return tag.trim()
 }
 
-export function HackathonCard({ hackathon, index = 0, isBookmarked = false }: HackathonCardProps) {
+export function HackathonCard({ hackathon, index = 0, isBookmarked = false, isRegistered = false }: HackathonCardProps) {
   const isClosed = hackathon.status === 'CLOSED'
   const deadline = formatDeadline(hackathon.registrationClose)
 
@@ -108,6 +110,7 @@ export function HackathonCard({ hackathon, index = 0, isBookmarked = false }: Ha
             {hackathon.scope === 'GLOBAL' ? '🌐' : '🇮🇳'}
           </span>
           <PrestigeBadge tier={hackathon.prestigeTier} />
+          <RegisterButton hackathonId={hackathon.id} initialRegistered={isRegistered} />
           <BookmarkButton hackathonId={hackathon.id} initialBookmarked={isBookmarked} />
         </div>
       </div>

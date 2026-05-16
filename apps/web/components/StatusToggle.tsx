@@ -1,17 +1,24 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useTransition } from 'react'
+import { useTransition, useOptimistic } from 'react'
 import { cn } from '@/lib/utils'
+import { motion } from 'framer-motion'
 
 export function StatusToggle() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
-  const isClosedView = searchParams.get('status') === 'CLOSED'
+  
+  const currentParam = searchParams.get('status') === 'CLOSED'
+  const [optimisticClosed, setOptimisticClosed] = useOptimistic(
+    currentParam,
+    (_state, newStatus: boolean) => newStatus
+  )
 
   function toggle(closed: boolean) {
+    setOptimisticClosed(closed)
     const params = new URLSearchParams(searchParams.toString())
     if (closed) {
       params.set('status', 'CLOSED')
@@ -25,27 +32,37 @@ export function StatusToggle() {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="relative flex items-center bg-card border border-border rounded-card p-1 max-w-fit">
       <button
         onClick={() => toggle(false)}
         className={cn(
-          'px-3 py-1 rounded-chip text-xs font-mono border transition-all duration-150',
-          !isClosedView
-            ? 'border-accent text-accent bg-accent/10'
-            : 'border-border text-text-muted hover:text-text-primary'
+          'relative px-4 py-1.5 z-10 text-sm font-mono transition-colors duration-300',
+          !optimisticClosed ? 'text-accent' : 'text-text-muted hover:text-text-primary'
         )}
       >
+        {!optimisticClosed && (
+          <motion.div
+            layoutId="status-pill"
+            className="absolute inset-0 bg-accent/10 border border-accent/20 rounded-[6px] z-[-1]"
+            transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+          />
+        )}
         Open
       </button>
       <button
         onClick={() => toggle(true)}
         className={cn(
-          'px-3 py-1 rounded-chip text-xs font-mono border transition-all duration-150',
-          isClosedView
-            ? 'border-border text-text-muted bg-tag-bg'
-            : 'border-border text-text-muted hover:text-text-primary'
+          'relative px-4 py-1.5 z-10 text-sm font-mono transition-colors duration-300',
+          optimisticClosed ? 'text-text-primary' : 'text-text-muted hover:text-text-primary'
         )}
       >
+        {optimisticClosed && (
+          <motion.div
+            layoutId="status-pill"
+            className="absolute inset-0 bg-tag-bg border border-border rounded-[6px] z-[-1]"
+            transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+          />
+        )}
         Closed
       </button>
     </div>

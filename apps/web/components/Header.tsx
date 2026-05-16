@@ -19,6 +19,16 @@ export function Header() {
           </div>
 
           <div className="flex items-center gap-3">
+            {session && (
+              <Link
+                href="/calendar"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-chip border border-border text-text-muted text-sm font-mono hover:border-accent hover:text-accent transition-all duration-300"
+                aria-label="Registered Hackathons Calendar"
+              >
+                <span>🗓</span>
+                <span className="hidden sm:inline">Calendar</span>
+              </Link>
+            )}
             <Link
               href="/submit"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-chip border border-border text-text-muted text-sm font-mono hover:border-accent hover:text-accent transition-all duration-300"

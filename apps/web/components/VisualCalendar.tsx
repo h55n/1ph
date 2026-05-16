@@ -29,9 +29,9 @@ interface EventData {
   prizePool?: number | null
   prizeCurrency?: string | null
   prizeDescription?: string | null
-  eventStart: Date | string
+  eventStart: Date | string | null
   eventEnd?: Date | string | null
-  registrationClose: Date | string
+  registrationClose: Date | string | null
   applyUrl?: string
   mode: string
   indiaRegion?: string | null

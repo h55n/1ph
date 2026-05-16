@@ -12,6 +12,7 @@ import {
   isSameMonth,
   isSameDay,
   addDays,
+  startOfDay,
 } from 'date-fns'
 import { ChevronLeft, ChevronRight, X, ExternalLink, MapPin, Trophy, Calendar as CalendarIcon } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -37,7 +38,34 @@ interface EventData {
 }
 
 export function VisualCalendar({ events }: { events: EventData[] }) {
-  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    if (!events.length) return new Date()
+    // Find the first event that ends after today (upcoming)
+    const now = new Date()
+    const upcoming = events.filter(e => {
+      const end = e.eventEnd ? new Date(e.eventEnd) : new Date(e.eventStart || e.registrationClose)
+      return end >= now
+    })
+    
+    // Sort upcoming events by start date
+    upcoming.sort((a, b) => {
+      const startA = new Date(a.eventStart || a.registrationClose).getTime()
+      const startB = new Date(b.eventStart || b.registrationClose).getTime()
+      return startA - startB
+    })
+
+    if (upcoming.length > 0) {
+      return new Date(upcoming[0].eventStart || upcoming[0].registrationClose)
+    }
+    // Fallback to the latest event if all are past
+    const latest = events.reduce((a, b) => {
+      const startA = new Date(a.eventStart || a.registrationClose).getTime()
+      const startB = new Date(b.eventStart || b.registrationClose).getTime()
+      return startA > startB ? a : b
+    })
+    return new Date(latest.eventStart || latest.registrationClose)
+  })
+  
   const [selectedEvent, setSelectedEvent] = useState<EventData | null>(null)
 
   const renderHeader = () => {
@@ -93,12 +121,13 @@ export function VisualCalendar({ events }: { events: EventData[] }) {
         formattedDate = format(day, 'd')
         const cloneDay = day
         
-        // Find events that start on this day
-        // For simplicity, we just mark events by their eventStart.
-        // If eventStart is missing, fallback to registrationClose.
+        // Find events that span across this day
         const dayEvents = events.filter(e => {
-          const eDate = new Date(e.eventStart || e.registrationClose)
-          return isSameDay(eDate, cloneDay)
+          if (!e.eventStart && !e.registrationClose) return false
+          const start = startOfDay(new Date(e.eventStart || e.registrationClose))
+          const end = e.eventEnd ? startOfDay(new Date(e.eventEnd)) : start
+          const current = startOfDay(cloneDay)
+          return current >= start && current <= end
         })
 
         const isCurrentMonth = isSameMonth(day, monthStart)

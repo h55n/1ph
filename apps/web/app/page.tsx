@@ -149,6 +149,9 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
     }
   }
 
+  // Debug logs for production tracking
+  console.log(`[debug] hackathonsRaw: ${hackathonsRaw.length}, interleaved: ${interleaved.length}, total: ${total}, status: ${status}`)
+
   if (interleaved.length === 0) {
     return (
       <div className="text-center py-20">

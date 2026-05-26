@@ -30,21 +30,18 @@ MAX_ENRICH_PER_RUN = 25  # Don't burn too many API calls per pipeline run
 
 
 def _fetch_page_text(url: str) -> str | None:
-    """Fetch the URL via Jina Reader API to bypass JS and return clean markdown."""
+    """
+    Fetch the URL and return clean markdown for AI processing.
+    Uses the bridge (Jina Reader API).
+    """
     try:
-        jina_url = f"https://r.jina.ai/{url}"
-        with httpx.Client(timeout=30, follow_redirects=True) as client:
-            r = client.get(jina_url)
-            if r.status_code >= 400:
-                print(f"[enrichment] HTTP {r.status_code} from Jina for {url}")
-                return None
-            
-            clean = r.text
-            # Cap at ~12000 chars to stay within Mistral context window
-            return clean[:12000] if clean else None
+        from pipeline.zerocrawl_bridge import fetch_markdown
+        text = fetch_markdown(url, mode="auto", timeout=60, cache_ttl=3600)
+        if text and len(text) >= 100:
+            return text[:12000]
     except Exception as e:
-        print(f"[enrichment] Failed to fetch {url} via Jina: {e}")
-        return None
+        print(f"[enrichment] Failed to fetch {url}: {e}")
+    return None
 
 
 def _call_mistral(page_text: str, title: str) -> dict | None:

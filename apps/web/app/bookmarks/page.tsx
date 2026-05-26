@@ -39,7 +39,7 @@ export default async function BookmarksPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {bookmarks.map(({ hackathon }, i) => (
+          {bookmarks.map(({ hackathon }: any, i: number) => (
             <HackathonCard
               key={hackathon.slug}
               hackathon={{

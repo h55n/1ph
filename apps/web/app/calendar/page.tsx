@@ -38,7 +38,7 @@ export default async function CalendarPage() {
     where: { userId },
     select: { hackathonId: true }
   })
-  const bookmarkedIds = new Set(bookmarks.map(b => b.hackathonId))
+  const bookmarkedIds = new Set(bookmarks.map((b: any) => b.hackathonId))
 
   if (registrations.length === 0) {
     return (
@@ -64,7 +64,7 @@ export default async function CalendarPage() {
       </div>
 
       <VisualCalendar
-        events={registrations.map(reg => ({
+        events={registrations.map((reg: any) => ({
           ...reg.hackathon,
           prizePool: reg.hackathon.prizePool ? Number(reg.hackathon.prizePool) : null,
           entryFee: reg.hackathon.entryFee ? Number(reg.hackathon.entryFee) : null,

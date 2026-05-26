@@ -1,16 +1,14 @@
 """
 hackerearth.py — HackerEarth connector.
-Method: httpx JSON API (primary) + Playwright (fallback).
+Method: httpx JSON API (primary) + ZeroCrawl browser fallback.
 HackerEarth has a public challenges API used by their mobile apps.
-Scrapes https://www.hackerearth.com/challenges/hackathon/
 """
-import random
 import re
+from bs4 import BeautifulSoup
 
 from .base import BaseConnector, ConnectorResult, RawHackathon
 
 LIST_URL = "https://www.hackerearth.com/challenges/hackathon/"
-# HackerEarth has an internal API endpoint used by their SPA
 API_URL = "https://www.hackerearth.com/challenges/json/challenges/?challenge_type=hackathon&status=ongoing&limit=50"
 
 
@@ -81,137 +79,112 @@ class HackerEarthConnector(BaseConnector):
             print(f"[{self.SOURCE}] API attempt failed: {e}")
         return []
 
-    def fetch(self) -> ConnectorResult:
-        from playwright.sync_api import sync_playwright
+    def _scrape_fallback(self) -> list:
+        """ZeroCrawl browser fallback when API is unavailable."""
+        from ..zerocrawl_bridge import fetch_js_page
+        records = []
 
+        try:
+            print(f"[{self.SOURCE}] Fallback: ZeroCrawl browser mode for {LIST_URL}...")
+            html = fetch_js_page(LIST_URL, timeout=90)
+            if not html:
+                return records
+
+            soup = BeautifulSoup(html, "html.parser")
+
+            # Try card selectors
+            cards = (
+                soup.select(".challenge-card") or
+                soup.select(".hackathon-card") or
+                soup.select("[class*='challenge-card']") or
+                soup.select("[class*='hackathon-card']") or
+                soup.select(".card-content")
+            )
+
+            if cards:
+                for card in cards:
+                    try:
+                        title_el = card.select_one(
+                            "h2, h3, .title, [class*='title'], .challenge-name, [class*='challenge-name']"
+                        )
+                        link_el = card.select_one("a[href]")
+                        if not title_el or not link_el:
+                            continue
+
+                        title = title_el.get_text(strip=True)
+                        href = link_el.get("href", "")
+                        apply_url = href if href.startswith("http") else f"https://www.hackerearth.com{href}"
+                        slug = href.rstrip("/").split("/")[-1]
+
+                        prize_el = card.select_one("[class*='prize'], [class*='reward'], .prize")
+                        prize_text = prize_el.get_text(strip=True) if prize_el else ""
+                        prize = _parse_prize(prize_text)
+
+                        desc_el = card.select_one("p, [class*='desc'], [class*='description']")
+                        description = desc_el.get_text(strip=True)[:500] if desc_el else None
+
+                        org_el = card.select_one("[class*='company'], [class*='org'], [class*='host']")
+                        org = org_el.get_text(strip=True) if org_el else "HackerEarth"
+
+                        tags_els = card.select("[class*='tag'], [class*='skill']")
+                        tags = [t.get_text(strip=True) for t in tags_els[:5] if t.get_text(strip=True)]
+
+                        records.append(RawHackathon(
+                            source_id=f"he-{slug}",
+                            title=title,
+                            organizer_name=org,
+                            apply_url=apply_url,
+                            registration_close=None,
+                            description=description,
+                            prize_pool=prize,
+                            theme_tags=tags,
+                            mode="ONLINE",
+                            scope="GLOBAL",
+                        ))
+                    except Exception:
+                        continue
+            else:
+                # Fallback: all hackathon links
+                links = soup.select("a[href*='/challenges/'][href*='/hackathon']")
+                seen: set = set()
+                for link in links:
+                    try:
+                        href = link.get("href", "")
+                        if not href or href in seen:
+                            continue
+                        seen.add(href)
+                        apply_url = href if href.startswith("http") else f"https://www.hackerearth.com{href}"
+                        title_el = link.select_one("h2, h3, .title, [class*='title']")
+                        title = title_el.get_text(strip=True) if title_el else link.get_text(strip=True)
+                        if not title or len(title) < 3:
+                            continue
+                        slug = href.rstrip("/").split("/")[-1]
+                        records.append(RawHackathon(
+                            source_id=f"he-{slug}",
+                            title=title,
+                            organizer_name="HackerEarth",
+                            apply_url=apply_url,
+                            registration_close=None,
+                            mode="ONLINE",
+                            scope="GLOBAL",
+                        ))
+                    except Exception:
+                        continue
+
+            print(f"[{self.SOURCE}] Fallback collected {len(records)} records")
+        except Exception as e:
+            print(f"[{self.SOURCE}] Fallback error: {e}")
+
+        return records
+
+    def fetch(self) -> ConnectorResult:
         # Try API first
         api_records = self._try_api()
         if api_records:
             return ConnectorResult(source=self.SOURCE, records=api_records, status="SUCCESS", error=None)
 
-        # Fallback: Playwright
-        records = []
-        error = None
-
-        try:
-            with sync_playwright() as pw:
-                browser = pw.chromium.launch(headless=True)
-                ctx = browser.new_context(
-                    user_agent=(
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-                    ),
-                    viewport={"width": 1366, "height": 768},
-                )
-                page = ctx.new_page()
-
-                try:
-                    print(f"[{self.SOURCE}] Playwright: Navigating to {LIST_URL}...")
-                    page.goto(LIST_URL, timeout=60000, wait_until="domcontentloaded")
-                    page.wait_for_timeout(6000)
-
-                    # Scroll to trigger lazy loading
-                    for _ in range(3):
-                        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                        page.wait_for_timeout(random.randint(1500, 2000))
-
-                    SELECTORS = [
-                        ".challenge-card",
-                        ".hackathon-card",
-                        "[class*='challenge-card']",
-                        "[class*='hackathon-card']",
-                        ".card-content",
-                        "article.challenge",
-                        "div[class*='challenge-list'] > div",
-                        "li[class*='challenge']",
-                    ]
-                    cards = []
-                    for sel in SELECTORS:
-                        cards = page.query_selector_all(sel)
-                        if cards:
-                            print(f"[{self.SOURCE}] Found {len(cards)} cards with: {sel}")
-                            break
-
-                    if not cards:
-                        # Fallback: grab all hackathon links
-                        links = page.query_selector_all("a[href*='/challenges/'][href*='/hackathon']")
-                        seen: set = set()
-                        for link in links:
-                            try:
-                                href = link.get_attribute("href") or ""
-                                if not href or href in seen:
-                                    continue
-                                seen.add(href)
-                                apply_url = href if href.startswith("http") else f"https://www.hackerearth.com{href}"
-                                title_el = link.query_selector("h2, h3, .title, [class*='title']")
-                                title = title_el.inner_text().strip() if title_el else link.inner_text().strip()
-                                if not title or len(title) < 3:
-                                    continue
-                                slug = href.rstrip("/").split("/")[-1]
-                                records.append(RawHackathon(
-                                    source_id=f"he-{slug}",
-                                    title=title,
-                                    organizer_name="HackerEarth",
-                                    apply_url=apply_url,
-                                    registration_close=None,
-                                    mode="ONLINE",
-                                    scope="GLOBAL",
-                                ))
-                            except Exception:
-                                continue
-                    else:
-                        for card in cards:
-                            try:
-                                title_el = card.query_selector(
-                                    "h2, h3, .title, [class*='title'], .challenge-name, [class*='challenge-name']"
-                                )
-                                link_el = card.query_selector("a[href]")
-                                if not title_el or not link_el:
-                                    continue
-
-                                title = title_el.inner_text().strip()
-                                href = link_el.get_attribute("href") or ""
-                                apply_url = href if href.startswith("http") else f"https://www.hackerearth.com{href}"
-                                slug = href.rstrip("/").split("/")[-1]
-
-                                prize_el = card.query_selector("[class*='prize'], [class*='reward'], .prize")
-                                prize_text = prize_el.inner_text().strip() if prize_el else ""
-                                prize = _parse_prize(prize_text)
-
-                                desc_el = card.query_selector("p, [class*='desc'], [class*='description']")
-                                description = desc_el.inner_text().strip()[:500] if desc_el else None
-
-                                org_el = card.query_selector("[class*='company'], [class*='org'], [class*='host']")
-                                org = org_el.inner_text().strip() if org_el else "HackerEarth"
-
-                                tags_els = card.query_selector_all("[class*='tag'], [class*='skill']")
-                                tags = [t.inner_text().strip() for t in tags_els[:5] if t.inner_text().strip()]
-
-                                records.append(RawHackathon(
-                                    source_id=f"he-{slug}",
-                                    title=title,
-                                    organizer_name=org,
-                                    apply_url=apply_url,
-                                    registration_close=None,
-                                    description=description,
-                                    prize_pool=prize,
-                                    theme_tags=tags,
-                                    mode="ONLINE",
-                                    scope="GLOBAL",
-                                ))
-                            except Exception:
-                                continue
-
-                    print(f"[{self.SOURCE}] Playwright collected {len(records)} records")
-
-                except Exception as e:
-                    print(f"[{self.SOURCE}] Error: {e}")
-                    error = str(e)
-                finally:
-                    browser.close()
-
-        except Exception as e:
-            error = str(e)
-
-        status = "SUCCESS" if records else ("PARTIAL" if error else "FAILED")
+        # Fallback: ZeroCrawl browser scraper
+        records = self._scrape_fallback()
+        status = "SUCCESS" if records else "FAILED"
+        error = None if records else "Both API and browser fallback returned no records"
         return ConnectorResult(source=self.SOURCE, records=records, status=status, error=error)

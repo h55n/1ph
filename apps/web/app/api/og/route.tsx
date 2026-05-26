@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     if (h) {
       title = h.title
       organizer = h.organizerName
-      deadline = `Closes ${new Date(h.registrationClose).toLocaleDateString('en-IN', {
+      deadline = `Closes ${new Date((h.registrationClose) as string | Date).toLocaleDateString('en-IN', {
         day: 'numeric', month: 'short', year: 'numeric',
       })}`
     }

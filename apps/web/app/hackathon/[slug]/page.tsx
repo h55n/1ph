@@ -20,7 +20,7 @@ export async function generateStaticParams() {
       take: 500,
     })
     .catch(() => [])
-  return rows.map((row) => ({ slug: row.slug }))
+  return rows.map((row: any) => ({ slug: row.slug }))
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -95,7 +95,7 @@ export default async function HackathonDetailPage({ params }: { params: Promise<
   // Sanitize theme tags — strip raw JSON objects
   const cleanTags = h.themeTags
     .map(safeTag)
-    .filter((t) => t.length > 0 && t.length < 60)
+    .filter((t: string) => t.length > 0 && t.length < 60)
 
   // Build a rich About text — prefer longDescription, then description
   const rawAbout = h.longDescription || h.description || ''
@@ -105,8 +105,8 @@ export default async function HackathonDetailPage({ params }: { params: Promise<
   const aboutParagraphs = rawAbout
     ? rawAbout
         .split(/\n\n+|\n(?=[A-Z])/)
-        .map((p) => p.trim())
-        .filter((p) => p.length > 20)
+        .map((p: string) => p.trim())
+        .filter((p: string) => p.length > 20)
     : [
         // Fallback: present as 3 logical paragraphs
         [
@@ -130,7 +130,7 @@ export default async function HackathonDetailPage({ params }: { params: Promise<
           h.themeTags && h.themeTags.length > 0
             ? `Key themes and tracks include ${h.themeTags.slice(0, 4).map((t: string) => safeTag(t)).filter(Boolean).join(', ')}.`
             : '',
-          `Registration closes on ${new Date(h.registrationClose).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}. Don't miss the deadline — apply early to secure your spot.`,
+          `Registration closes on ${new Date((h.registrationClose) as string | Date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}. Don't miss the deadline — apply early to secure your spot.`,
         ].filter(Boolean).join(' '),
       ].filter((p) => p.length > 20)
 
@@ -138,7 +138,7 @@ export default async function HackathonDetailPage({ params }: { params: Promise<
     '@context': 'https://schema.org',
     '@type': 'Event',
     name: h.title,
-    startDate: h.eventStart.toISOString(),
+    startDate: h.eventStart?.toISOString() ?? h.registrationClose?.toISOString(),
     endDate: h.eventEnd?.toISOString(),
     eventStatus: isClosed
       ? 'https://schema.org/EventCancelled'
@@ -282,7 +282,7 @@ export default async function HackathonDetailPage({ params }: { params: Promise<
             <h2 className="font-serif text-xl text-text-primary mb-3">Timeline</h2>
             <ul className="space-y-2 font-mono text-sm text-text-muted list-disc list-inside">
               {h.registrationOpen && <li><strong className="text-text-primary">Registration Opens:</strong> {new Date(h.registrationOpen).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric'})}</li>}
-              <li><strong className="text-text-primary">{isClosed ? 'Registration Closed:' : 'Registration Deadline:'}</strong> {new Date(h.registrationClose).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric'})}</li>
+              {h.registrationClose && <li><strong className="text-text-primary">{isClosed ? 'Registration Closed:' : 'Registration Deadline:'}</strong> {new Date((h.registrationClose) as string | Date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric'})}</li>}
               {h.eventStart && <li><strong className="text-text-primary">Event Starts:</strong> {new Date(h.eventStart).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric'})}</li>}
               {h.eventEnd && <li><strong className="text-text-primary">Event Ends:</strong> {new Date(h.eventEnd).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric'})}</li>}
             </ul>

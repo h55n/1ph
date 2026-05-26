@@ -28,12 +28,16 @@ jobs:
         run: pip install -r pipeline/requirements.txt
 
       - name: Install Playwright browsers
-        run: playwright install chromium --with-deps
+        # Install both Chromium (for fallback) and Firefox (for ZeroCrawl hardened mode)
+        run: |
+          playwright install chromium --with-deps
+          playwright install firefox --with-deps
 
       - name: Run pipeline
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
         run: python pipeline/run.py
 
       - name: Revalidate frontend cache

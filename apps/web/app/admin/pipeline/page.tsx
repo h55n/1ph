@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 export default async function AdminPipelinePage() {
   const runs = await prisma.pipelineRun.findMany({ orderBy: { runAt: 'desc' }, take: 100 })
 
-  const latestBySource = runs.reduce<Record<string, typeof runs[0]>>((acc, run) => {
+  const latestBySource = (runs as any[]).reduce((acc: any, run: any) => {
     if (!acc[run.source]) acc[run.source] = run
     return acc
   }, {})
@@ -18,7 +18,7 @@ export default async function AdminPipelinePage() {
       <div>
         <h2 className="font-mono text-xs text-text-muted uppercase tracking-wider mb-3">Latest per Source</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {Object.entries(latestBySource).map(([source, run]) => (
+          {Object.entries(latestBySource).map(([source, run]: [string, any]) => (
             <div key={source} className="bg-card border border-border rounded-card p-3">
               <div className="font-mono text-xs text-text-muted mb-1">{source}</div>
               <div className={`font-mono text-sm font-medium ${STATUS_COLOR[run.status]}`}>{run.status}</div>
@@ -34,13 +34,13 @@ export default async function AdminPipelinePage() {
           <table className="w-full text-sm font-mono min-w-[640px]">
             <thead>
               <tr className="border-b border-border">
-                {['Source', 'Status', 'New', 'Updated', 'Closed', 'Ran at', 'Errors'].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 text-text-muted font-normal text-xs">{h}</th>
+                {['Source', 'Status', 'New', 'Updated', 'Closed', 'Ran at', 'Errors'].map((col) => (
+                  <th key={col} className="text-left px-4 py-3 text-text-muted font-normal text-xs">{col}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {runs.map((run) => (
+              {runs.map((run: any) => (
                 <tr key={run.id} className="border-b border-border last:border-0 hover:bg-tag-bg transition-colors">
                   <td className="px-4 py-2 text-text-primary">{run.source}</td>
                   <td className="px-4 py-2">

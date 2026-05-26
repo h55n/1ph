@@ -1,8 +1,41 @@
+# ── Core HTTP & DB ────────────────────────────────────────────────────────────
 httpx[http2]==0.27.0
 beautifulsoup4==4.12.3
-playwright==1.44.0
 supabase==2.5.3
 tenacity==8.3.0
 python-dotenv==1.0.1
 python-Levenshtein==0.25.1
-# enrichment.py uses Mistral REST API via httpx (no SDK needed)
+
+# ── Playwright (browser engine for ZeroCrawl) ─────────────────────────────────
+playwright==1.44.0
+
+# ── ZeroCrawl dependencies ────────────────────────────────────────────────────
+# TLS fingerprint mimicry — replaces raw httpx for anti-detection
+curl-cffi>=0.7.0
+# Fast HTML parsing
+selectolax>=0.3.21
+# Main content extraction (trafilatura)
+trafilatura>=1.10.0
+# Logging
+loguru>=0.7.2
+# TLD extraction
+tldextract>=5.1.2
+# Data models
+pydantic>=2.7.0
+pydantic-settings>=2.3.0
+# Async SQLite (ZeroCrawl caching)
+aiosqlite>=0.20.0
+# Markdown conversion
+markdownify>=0.12.1
+html2text>=2024.2.26
+# Date parsing
+dateparser>=1.2.0
+# Python utilities
+python-dateutil>=2.9.0
+charset-normalizer>=3.3.0
+
+# ── Optional: Camoufox (hardened Firefox, graceful fallback if unavailable) ───
+# camoufox[geoip]>=0.4.0
+
+# ── Enrichment (Mistral via REST API — no SDK needed) ─────────────────────────
+# (httpx already included above)

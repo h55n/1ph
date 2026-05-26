@@ -17,7 +17,9 @@ COLLEGE_KEYWORDS = {
 
 
 def _has_required_fields(record: dict) -> tuple[bool, str]:
-    for field in ("title", "apply_url", "organizer_name", "registration_close"):
+    # Note: registration_close is intentionally excluded — the enrichment phase
+    # fills in real deadlines for records that initially have stub/null dates.
+    for field in ("title", "apply_url", "organizer_name"):
         if not record.get(field):
             return False, f"missing_{field}"
     return True, ""

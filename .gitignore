@@ -56,3 +56,7 @@ tmp/env_backups/
 # Local only logs
 change_log.md
 
+
+pipeline/build/
+pipeline/dist/
+pipeline/*.spec

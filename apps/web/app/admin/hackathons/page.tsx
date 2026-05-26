@@ -6,7 +6,7 @@ export default async function AdminHackathonsPage({
   searchParams: Promise<{ source?: string; status?: string; tier?: string }>
 }) {
   const params = await searchParams
-  const where: Record<string, unknown> = {}
+  const where: any = {}
   if (params.source) where.source = params.source
   if (params.status) where.status = params.status
   if (params.tier) where.prestigeTier = params.tier
@@ -46,13 +46,13 @@ export default async function AdminHackathonsPage({
         <table className="w-full text-sm font-mono min-w-[800px]">
           <thead>
             <tr className="border-b border-border">
-              {['Title', 'Organizer', 'Source', 'Tier', 'Status', 'Verified', 'URL Fails', 'Last Sync', 'Actions'].map((h) => (
-                <th key={h} className="text-left px-3 py-3 text-text-muted font-normal text-xs whitespace-nowrap">{h}</th>
+              {['Title', 'Organizer', 'Source', 'Tier', 'Status', 'Verified', 'URL Fails', 'Last Sync', 'Actions'].map((col) => (
+                <th key={col} className="text-left px-3 py-3 text-text-muted font-normal text-xs whitespace-nowrap">{col}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {hackathons.map((h) => (
+            {hackathons.map((h: any) => (
               <tr key={h.id} className="border-b border-border last:border-0 hover:bg-tag-bg transition-colors">
                 <td className="px-3 py-2 max-w-[200px]"><span className="text-text-primary line-clamp-1">{h.title}</span></td>
                 <td className="px-3 py-2 text-text-muted max-w-[120px] truncate">{h.organizerName}</td>

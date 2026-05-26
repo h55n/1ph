@@ -60,15 +60,15 @@ export default async function AdminPage() {
           <table className="w-full text-sm font-mono">
             <thead>
               <tr className="border-b border-border">
-                {['Source', 'Status', 'New', 'Updated', 'Time'].map((h) => (
-                  <th key={h} className="text-left px-4 py-2 text-text-muted font-normal">{h}</th>
+                {['Source', 'Status', 'New', 'Updated', 'Time'].map((col) => (
+                  <th key={col} className="text-left px-4 py-2 text-text-muted font-normal">{col}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {recentRuns.length === 0 ? (
                 <tr><td colSpan={5} className="px-4 py-6 text-text-muted text-center">No pipeline runs yet</td></tr>
-              ) : recentRuns.map((run, i) => (
+              ) : recentRuns.map((run: any, i: number) => (
                 <tr key={i} className="border-b border-border last:border-0 hover:bg-tag-bg transition-colors">
                   <td className="px-4 py-2 text-text-primary">{run.source}</td>
                   <td className={`px-4 py-2 ${STATUS_COLOR[run.status] ?? 'text-text-muted'}`}>{run.status}</td>

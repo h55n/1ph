@@ -1,1 +1,1 @@
-# pipeline package
+# pipeline module

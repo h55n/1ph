@@ -10,7 +10,8 @@ export default async function AdminDuplicatesPage() {
   })
 
   // Simple duplicate detection: same apply URL across different sources
-  const urlMap = new Map<string, typeof hackathons>()
+  type HackSummary = (typeof hackathons)[number]
+  const urlMap = new Map<string, HackSummary[]>()
   for (const h of hackathons) {
     const key = h.applyUrl.toLowerCase().trim()
     if (!urlMap.has(key)) urlMap.set(key, [])

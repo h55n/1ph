@@ -125,7 +125,8 @@ def upsert_hackathons(records: list[dict], source: str) -> dict:
                     print(f"[db] Fallback update failed for '{record.get('title', '?')}': {update_err}")
                     errors += 1
             else:
-                print(f"[db] Upsert error for '{record.get('title', '?')}': {err_str[:120]}")
+                safe_title = str(record.get('title', '?')).encode('ascii', 'ignore').decode('ascii')
+                print(f"[db] Upsert error for '{safe_title}': {err_str[:120]}")
                 errors += 1
 
     return {"inserted": inserted, "updated": updated, "errors": errors}

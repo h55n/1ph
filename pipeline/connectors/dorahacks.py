@@ -1,11 +1,10 @@
 """
 dorahacks.py — DoraHacks connector.
-Method: Playwright (JS-rendered SPA, no public REST API available).
-Scrapes https://dorahacks.io/hackathon with headless browser.
-Uses DoraHacks API endpoint as primary, Playwright as fallback.
+Method: DoraHacks API endpoint as primary (much more reliable).
+Fallback: ZeroCrawl browser mode (replaces raw Playwright).
 """
-import random
 import re
+from bs4 import BeautifulSoup
 
 from .base import BaseConnector, ConnectorResult, RawHackathon
 
@@ -77,139 +76,115 @@ class DoraHacksConnector(BaseConnector):
             print(f"[{self.SOURCE}] API attempt failed: {e}")
         return []
 
-    def fetch(self) -> ConnectorResult:
-        from playwright.sync_api import sync_playwright
+    def _scrape_fallback(self) -> list:
+        """ZeroCrawl browser fallback when API is unavailable."""
+        from ..zerocrawl_bridge import fetch_js_page
+        records = []
 
+        try:
+            print(f"[{self.SOURCE}] Fallback: ZeroCrawl browser mode for {LIST_URL}...")
+            html = fetch_js_page(LIST_URL, timeout=90)
+            if not html:
+                return records
+
+            soup = BeautifulSoup(html, "html.parser")
+
+            # Try DoraHacks card selectors
+            cards = (
+                soup.select(".hackathon-card") or
+                soup.select("[class*='hackathon-card']") or
+                soup.select("[class*='HackathonCard']") or
+                soup.select("[class*='buidl-card']") or
+                soup.select("[class*='CardWrapper']") or
+                soup.select("article[class*='hackathon']") or
+                soup.select("div[class*='hackathon-item']")
+            )
+
+            if cards:
+                for card in cards:
+                    try:
+                        title_el = card.select_one("h2, h3, [class*='title'], [class*='name']")
+                        link_el = card.select_one("a[href]")
+                        if not title_el or not link_el:
+                            continue
+
+                        title = title_el.get_text(strip=True)
+                        href = link_el.get("href", "")
+                        apply_url = href if href.startswith("http") else f"https://dorahacks.io{href}"
+                        slug = href.rstrip("/").split("/")[-1]
+
+                        prize_el = card.select_one("[class*='prize'], [class*='reward']")
+                        prize_text = prize_el.get_text(strip=True) if prize_el else ""
+                        prize = _parse_prize(prize_text)
+
+                        desc_el = card.select_one("p, [class*='desc'], [class*='description']")
+                        description = desc_el.get_text(strip=True)[:500] if desc_el else None
+
+                        org_el = card.select_one("[class*='org'], [class*='organizer'], [class*='host']")
+                        org = org_el.get_text(strip=True) if org_el else "DoraHacks"
+
+                        tags_els = card.select("[class*='tag'], [class*='track']")
+                        tags = [t.get_text(strip=True) for t in tags_els[:5] if t.get_text(strip=True)]
+
+                        records.append(RawHackathon(
+                            source_id=f"dh-{slug}",
+                            title=title,
+                            organizer_name=org,
+                            apply_url=apply_url,
+                            registration_close=None,
+                            prize_pool=prize,
+                            prize_currency="USD",
+                            description=description,
+                            theme_tags=tags,
+                            mode="ONLINE",
+                            scope="GLOBAL",
+                        ))
+                    except Exception:
+                        continue
+            else:
+                # Last resort: extract links
+                links = soup.select("a[href*='/hackathon/']")
+                seen: set = set()
+                for link in links:
+                    try:
+                        href = link.get("href", "")
+                        if not href or href in seen or href == "/hackathon":
+                            continue
+                        seen.add(href)
+                        apply_url = href if href.startswith("http") else f"https://dorahacks.io{href}"
+                        title_el = link.select_one("h2, h3, [class*='title'], [class*='name']")
+                        title = title_el.get_text(strip=True) if title_el else ""
+                        if not title or len(title) < 3:
+                            title = href.rstrip("/").split("/")[-1].replace("-", " ").title()
+                        if not title:
+                            continue
+                        slug = href.rstrip("/").split("/")[-1]
+                        records.append(RawHackathon(
+                            source_id=f"dh-{slug}",
+                            title=title,
+                            organizer_name="DoraHacks",
+                            apply_url=apply_url,
+                            registration_close=None,
+                            mode="ONLINE",
+                            scope="GLOBAL",
+                        ))
+                    except Exception:
+                        continue
+
+            print(f"[{self.SOURCE}] Fallback collected {len(records)} records")
+        except Exception as e:
+            print(f"[{self.SOURCE}] Fallback error: {e}")
+
+        return records
+
+    def fetch(self) -> ConnectorResult:
         # Try API first
         api_records = self._try_api()
         if api_records:
             return ConnectorResult(source=self.SOURCE, records=api_records, status="SUCCESS", error=None)
 
-        # Fallback: Playwright scraper
-        records = []
-        error = None
-
-        try:
-            with sync_playwright() as pw:
-                browser = pw.chromium.launch(headless=True)
-                ctx = browser.new_context(
-                    user_agent=(
-                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-                    ),
-                    viewport={"width": 1280, "height": 900},
-                )
-                page = ctx.new_page()
-
-                try:
-                    print(f"[{self.SOURCE}] Playwright: Navigating to {LIST_URL}...")
-                    page.goto(LIST_URL, timeout=60000, wait_until="domcontentloaded")
-                    page.wait_for_timeout(6000)
-
-                    # Scroll to load lazy-loaded cards
-                    for _ in range(4):
-                        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                        page.wait_for_timeout(random.randint(1500, 2500))
-
-                    # DoraHacks selectors (try many since they change frequently)
-                    SELECTORS = [
-                        ".hackathon-card",
-                        "[class*='hackathon-card']",
-                        "[class*='HackathonCard']",
-                        "[class*='buidl-card']",
-                        "[class*='CardWrapper']",
-                        "article[class*='hackathon']",
-                        "div[class*='hackathon-item']",
-                    ]
-                    cards = []
-                    for sel in SELECTORS:
-                        cards = page.query_selector_all(sel)
-                        if cards:
-                            print(f"[{self.SOURCE}] Found {len(cards)} cards with: {sel}")
-                            break
-
-                    if not cards:
-                        print(f"[{self.SOURCE}] Fallback to link scraping")
-                        links = page.query_selector_all("a[href*='/hackathon/']")
-                        seen: set = set()
-                        for link in links:
-                            try:
-                                href = link.get_attribute("href") or ""
-                                if not href or href in seen or href == "/hackathon":
-                                    continue
-                                seen.add(href)
-                                apply_url = href if href.startswith("http") else f"https://dorahacks.io{href}"
-                                title_el = link.query_selector("h2, h3, [class*='title'], [class*='name']")
-                                title = title_el.inner_text().strip() if title_el else ""
-                                if not title or len(title) < 3:
-                                    title = href.rstrip("/").split("/")[-1].replace("-", " ").title()
-                                if not title:
-                                    continue
-                                slug = href.rstrip("/").split("/")[-1]
-                                records.append(RawHackathon(
-                                    source_id=f"dh-{slug}",
-                                    title=title,
-                                    organizer_name="DoraHacks",
-                                    apply_url=apply_url,
-                                    registration_close=None,
-                                    mode="ONLINE",
-                                    scope="GLOBAL",
-                                ))
-                            except Exception:
-                                continue
-                    else:
-                        for card in cards:
-                            try:
-                                title_el = card.query_selector("h2, h3, [class*='title'], [class*='name']")
-                                is_a_tag = card.evaluate("node => node.tagName.toLowerCase() === 'a'")
-                                link_el = card if is_a_tag else card.query_selector("a[href]")
-                                if not title_el or not link_el:
-                                    continue
-
-                                title = title_el.inner_text().strip()
-                                href = link_el.get_attribute("href") or ""
-                                apply_url = href if href.startswith("http") else f"https://dorahacks.io{href}"
-                                slug = href.rstrip("/").split("/")[-1]
-
-                                prize_el = card.query_selector("[class*='prize'], [class*='reward']")
-                                prize_text = prize_el.inner_text().strip() if prize_el else ""
-                                prize = _parse_prize(prize_text)
-
-                                desc_el = card.query_selector("p, [class*='desc'], [class*='description']")
-                                description = desc_el.inner_text().strip()[:500] if desc_el else None
-
-                                org_el = card.query_selector("[class*='org'], [class*='organizer'], [class*='host']")
-                                org = org_el.inner_text().strip() if org_el else "DoraHacks"
-
-                                tags_els = card.query_selector_all("[class*='tag'], [class*='track']")
-                                tags = [t.inner_text().strip() for t in tags_els[:5] if t.inner_text().strip()]
-
-                                records.append(RawHackathon(
-                                    source_id=f"dh-{slug}",
-                                    title=title,
-                                    organizer_name=org,
-                                    apply_url=apply_url,
-                                    registration_close=None,
-                                    prize_pool=prize,
-                                    prize_currency="USD",
-                                    description=description,
-                                    theme_tags=tags,
-                                    mode="ONLINE",
-                                    scope="GLOBAL",
-                                ))
-                            except Exception:
-                                continue
-
-                    print(f"[{self.SOURCE}] Playwright collected {len(records)} records")
-
-                except Exception as e:
-                    print(f"[{self.SOURCE}] Error: {e}")
-                    error = str(e)
-                finally:
-                    browser.close()
-
-        except Exception as e:
-            error = str(e)
-
-        status = "SUCCESS" if records else ("PARTIAL" if error else "FAILED")
+        # Fallback: ZeroCrawl browser scraper
+        records = self._scrape_fallback()
+        status = "SUCCESS" if records else "FAILED"
+        error = None if records else "Both API and browser fallback returned no records"
         return ConnectorResult(source=self.SOURCE, records=records, status=status, error=error)

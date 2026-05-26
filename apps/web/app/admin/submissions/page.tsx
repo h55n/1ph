@@ -44,15 +44,15 @@ export default async function AdminSubmissionsPage({
         <table className="w-full text-sm font-mono">
           <thead>
             <tr className="border-b border-border">
-              {['Hackathon', 'Org', 'Submitted by', 'Date', 'Status', 'Actions'].map((h) => (
-                <th key={h} className="text-left px-4 py-3 text-text-muted font-normal text-xs">{h}</th>
+              {['Hackathon', 'Org', 'Submitted by', 'Date', 'Status', 'Actions'].map((col) => (
+                <th key={col} className="text-left px-4 py-3 text-text-muted font-normal text-xs">{col}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {submissions.length === 0 ? (
               <tr><td colSpan={6} className="px-4 py-8 text-text-muted text-center">No submissions</td></tr>
-            ) : submissions.map((sub) => (
+            ) : submissions.map((sub: any) => (
               <tr key={sub.id} className="border-b border-border last:border-0 hover:bg-tag-bg transition-colors">
                 <td className="px-4 py-3 text-text-primary max-w-[180px] truncate">{sub.hackathonTitle}</td>
                 <td className="px-4 py-3 text-text-muted max-w-[120px] truncate">{sub.orgName}</td>

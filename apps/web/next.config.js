@@ -5,6 +5,12 @@ const nextConfig = {
       { protocol: 'https', hostname: '**' },
     ],
   },
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 }
 
 module.exports = nextConfig

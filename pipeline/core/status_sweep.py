@@ -37,6 +37,11 @@ def calculate_status(reg_close_str: str, reg_open_str: str = None) -> str:
     return "OPEN"
 
 
+import random
+
+_URL_CHECK_SAMPLE_RATE = 0.20  # Check 20% of active hackathons per run
+
+
 def _check_url_health(url: str) -> bool:
     """Returns True if URL is alive (2xx/3xx), False otherwise."""
     try:
@@ -94,11 +99,17 @@ def run_sweep(supabase_client) -> dict:
             # (only if we didn't just mark it as CLOSED)
             current_fails = row.get("urlHealthFails") or 0
             url = row.get("applyUrl", "")
-            
+
             # We only check health for things that ARE or ARE BECOMING active
             effective_status = new_status if any(u.get("id") == row["id"] for u in updates) else row.get("status")
 
-            if url and effective_status != "CLOSED":
+            # Only check URL health for a random sample (20%) to avoid blocking the pipeline
+            # Always check if the hackathon has already accumulated fails (needs monitoring)
+            should_check_url = url and effective_status != "CLOSED" and (
+                current_fails > 0 or random.random() < _URL_CHECK_SAMPLE_RATE
+            )
+
+            if should_check_url:
                 alive = _check_url_health(url)
                 if not alive:
                     new_fails = current_fails + 1
@@ -111,7 +122,7 @@ def run_sweep(supabase_client) -> dict:
                             summary["closed"] += 1
                     else:
                         updates.append({"id": row["id"], "urlHealthFails": new_fails})
-                    
+
                     summary["url_flagged"] += 1
                 else:
                     if current_fails > 0:
@@ -120,6 +131,7 @@ def run_sweep(supabase_client) -> dict:
                             existing_update["urlHealthFails"] = 0
                         else:
                             updates.append({"id": row["id"], "urlHealthFails": 0})
+
 
         except Exception as e:
             print(f"[status_sweep] Error processing row {row.get('id')}: {e}")

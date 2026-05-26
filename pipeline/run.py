@@ -8,6 +8,13 @@ Run in CI:    python pipeline/run.py  (GitHub Actions sets env vars via secrets)
 import sys
 import os
 
+# Ensure Windows terminals don't crash when printing emojis
+if sys.stdout.encoding != 'utf-8':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 # Allow running as `python pipeline/run.py` from repo root
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -51,7 +58,6 @@ def main():
                 normalized.append(record)
 
         # ── 3. Quality Gate ───────────────────────────────────────────
-        print(f"[debug] {source}: {len(result.records)} raw -> {len(normalized)} normalized")
         passed, rejected, stats = quality_gate(normalized, check_urls=False)
         log.gate_result(source, len(passed), len(rejected))
         if stats:

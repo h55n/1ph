@@ -1,12 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 export function BookmarkButton({ hackathonId, initialBookmarked = false }: { hackathonId: string; initialBookmarked?: boolean }) {
-  const { data: session } = useSession()
   const router = useRouter()
   const [bookmarked, setBookmarked] = useState(initialBookmarked)
   const [loading, setLoading] = useState(false)
@@ -14,24 +12,20 @@ export function BookmarkButton({ hackathonId, initialBookmarked = false }: { hac
   async function toggle(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    if (!session) { 
-      router.push(`/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`)
-      return 
-    }
     setLoading(true)
     const prev = bookmarked
     setBookmarked(!prev)
     try {
-      if (prev) {
-        const res = await fetch(`/api/bookmarks/${hackathonId}`, { method: 'DELETE' })
-        if (!res.ok) setBookmarked(prev)
-      } else {
-        const res = await fetch('/api/bookmarks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ hackathonId }),
-        })
-        if (!res.ok) setBookmarked(prev)
+      const res = await fetch(prev ? `/api/bookmarks/${hackathonId}` : '/api/bookmarks', {
+        method: prev ? 'DELETE' : 'POST',
+        headers: prev ? undefined : { 'Content-Type': 'application/json' },
+        body: prev ? undefined : JSON.stringify({ hackathonId }),
+      })
+      if (res.status === 401) {
+        router.push(`/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`)
+        setBookmarked(prev)
+      } else if (!res.ok) {
+        setBookmarked(prev)
       }
     } catch {
       setBookmarked(prev)

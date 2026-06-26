@@ -13,7 +13,7 @@ from .base import BaseConnector, ConnectorResult, RawHackathon
 
 BASE_URL = "https://www.startupgrantsindia.com"
 LIST_URL = f"{BASE_URL}/competitions"
-PAGES_TO_SCRAPE = 3  # scrape first N pages (~75 listings)
+PAGES_TO_SCRAPE = 6  # scrape a wider set of pages for better coverage
 
 HEADERS = {
     "User-Agent": (

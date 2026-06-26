@@ -1,7 +1,8 @@
 import { prisma } from '@/lib/db'
+import { shouldUseDemoData } from '@/lib/demo-data'
 
 export default async function AdminPipelinePage() {
-  const runs = await prisma.pipelineRun.findMany({ orderBy: { runAt: 'desc' }, take: 100 })
+  const runs = shouldUseDemoData() ? [] : await prisma.pipelineRun.findMany({ orderBy: { runAt: 'desc' }, take: 100 })
 
   const latestBySource = runs.reduce<Record<string, typeof runs[0]>>((acc, run) => {
     if (!acc[run.source]) acc[run.source] = run

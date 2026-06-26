@@ -1,6 +1,7 @@
 import { ImageResponse } from '@vercel/og'
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
+import { findDemoHackathon, shouldUseDemoData } from '@/lib/demo-data'
 
 export const runtime = 'nodejs'
 
@@ -13,16 +14,21 @@ export async function GET(req: NextRequest) {
   let deadline = ''
 
   if (slug) {
-    const h = await prisma.hackathon.findUnique({
-      where: { slug },
-      select: { title: true, organizerName: true, registrationClose: true },
-    })
+    const h = shouldUseDemoData()
+      ? findDemoHackathon(slug)
+      : await prisma.hackathon.findUnique({
+        where: { slug },
+        select: { title: true, organizerName: true, registrationClose: true },
+      }).catch(() => null)
+
     if (h) {
       title = h.title
       organizer = h.organizerName
-      deadline = `Closes ${new Date(h.registrationClose).toLocaleDateString('en-IN', {
-        day: 'numeric', month: 'short', year: 'numeric',
-      })}`
+      if (h.registrationClose) {
+        deadline = `Closes ${new Date(h.registrationClose).toLocaleDateString('en-IN', {
+          day: 'numeric', month: 'short', year: 'numeric',
+        })}`
+      }
     }
   }
 

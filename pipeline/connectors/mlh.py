@@ -11,7 +11,11 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from .base import BaseConnector, ConnectorResult, RawHackathon
 
 # MLH season URL — update this when season rolls over
-URL = "https://mlh.io/seasons/2026/events"
+SEASON_URLS = [
+    "https://mlh.io/seasons/2025/events",
+    "https://mlh.io/seasons/2026/events",
+    "https://mlh.io/seasons/2027/events",
+]
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -56,78 +60,71 @@ class MLHConnector(BaseConnector):
     SCOPE = "GLOBAL"
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=20))
-    def _get_html(self) -> str:
+    def _get_html(self, url: str) -> str:
         with httpx.Client(timeout=20, headers=HEADERS, follow_redirects=True) as client:
-            r = client.get(URL)
+            r = client.get(url)
             r.raise_for_status()
             return r.text
 
     def fetch(self) -> ConnectorResult:
-        try:
-            html = self._get_html()
-        except Exception as e:
-            return ConnectorResult(source=self.SOURCE, records=[], status="FAILED", error=str(e))
-
-        soup = BeautifulSoup(html, "html.parser")
         records = []
+        error = None
+        try:
+            for url in SEASON_URLS:
+                try:
+                    html = self._get_html(url)
+                except Exception as e:
+                    error = str(e)
+                    continue
 
-        # Each hackathon is an <a href="...utm_source=mlh..."> containing all data inline
-        for a in soup.select("a[href]"):
-            href = a.get("href", "")
-            if "utm_source=mlh" not in href:
-                continue
-            # Strip UTM params to get clean apply URL
-            apply_url = href.split("?")[0]
-            if not apply_url.startswith("http"):
-                continue
+                soup = BeautifulSoup(html, "html.parser")
+                for a in soup.select("a[href]"):
+                    href = a.get("href", "")
+                    if "utm_source=mlh" not in href:
+                        continue
+                    apply_url = href.split("?")[0]
+                    if not apply_url.startswith("http"):
+                        continue
 
-            full_text = a.get_text(separator=" ", strip=True)
-            if not full_text:
-                continue
+                    full_text = a.get_text(separator=" ", strip=True)
+                    if not full_text:
+                        continue
 
-            # Title is in the following h4 sibling OR embedded in full_text after month-location prefix
-            # Structure: "{location}{title}{DATE_RANGE}{location_detail}{mode_tag}"
-            # Try to get title from the next h4 in the DOM
-            h4 = a.find_next_sibling("h4") or a.find("h4")
-            if h4:
-                title = h4.get_text(strip=True)
-            else:
-                # Fallback: find the title-like token in text (between location and month)
-                # Text example: "Bothell, WAUWB Hacks 26: The Future!APR 24 - 26..."
-                # Remove date portion and trailing location/mode
-                text_before_date = DATE_RE.split(full_text)[0] if DATE_RE.search(full_text) else full_text
-                # The title tends to start with capital letters after a state abbreviation
-                title = text_before_date.strip() or full_text[:80]
+                    h4 = a.find_next_sibling("h4") or a.find("h4")
+                    if h4:
+                        title = h4.get_text(strip=True)
+                    else:
+                        text_before_date = DATE_RE.split(full_text)[0] if DATE_RE.search(full_text) else full_text
+                        title = text_before_date.strip() or full_text[:80]
 
-            if not title or len(title) < 3:
-                continue
+                    if not title or len(title) < 3:
+                        continue
 
-            close_date = _parse_close_date(full_text)
+                    close_date = _parse_close_date(full_text)
+                    mode = "ONLINE"
+                    text_lower = full_text.lower()
+                    if "digital" in text_lower or "online" in text_lower or "worldwide" in text_lower:
+                        mode = "ONLINE"
+                    elif "in-person" in text_lower or "in person" in text_lower:
+                        mode = "OFFLINE"
 
-            # Mode detection
-            mode = "ONLINE"
-            text_lower = full_text.lower()
-            if "digital" in text_lower or "online" in text_lower or "worldwide" in text_lower:
-                mode = "ONLINE"
-            elif "in-person" in text_lower or "in person" in text_lower:
-                mode = "OFFLINE"
+                    description = f"MLH event. {full_text[:200]}".strip()
+                    records.append(RawHackathon(
+                        source_id=apply_url,
+                        title=title,
+                        organizer_name="Major League Hacking",
+                        apply_url=apply_url,
+                        registration_close=close_date,
+                        description=description[:500],
+                        mode=mode,
+                        scope="GLOBAL",
+                        theme_tags=["Open Innovation"],
+                        eligibility="STUDENTS",
+                        sponsors=["MLH"],
+                    ))
+        except Exception as e:
+            error = str(e)
 
-            # Description from full text
-            description = f"MLH Season 2026 event. {full_text[:200]}".strip()
-
-            records.append(RawHackathon(
-                source_id=apply_url,
-                title=title,
-                organizer_name="Major League Hacking",
-                apply_url=apply_url,
-                registration_close=close_date,
-                description=description[:500],
-                mode=mode,
-                scope="GLOBAL",
-                theme_tags=["Open Innovation"],
-                eligibility="STUDENTS",
-                sponsors=["MLH"],
-            ))
-
-        status = "SUCCESS" if records else "PARTIAL"
-        return ConnectorResult(source=self.SOURCE, records=records, status=status)
+        unique = {r.apply_url: r for r in records}.values()
+        status = "SUCCESS" if unique else ("PARTIAL" if error else "FAILED")
+        return ConnectorResult(source=self.SOURCE, records=list(unique), status=status, error=error)

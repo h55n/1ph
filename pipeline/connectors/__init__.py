@@ -8,6 +8,7 @@ from .devpost import DevpostConnector
 from .unstop import UnstopConnector
 from .hackerrank import HackerRankConnector
 from .luma import LumaConnector
+from .toplang import TopLangConnector
 
 ALL_CONNECTORS = [
     MLHConnector,
@@ -20,4 +21,5 @@ ALL_CONNECTORS = [
     UnstopConnector,
     HackerRankConnector,
     LumaConnector,
+    TopLangConnector,
 ]

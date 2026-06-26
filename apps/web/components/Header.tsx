@@ -1,12 +1,35 @@
 'use client'
 
 import Link from 'next/link'
-import { useSession, signIn, signOut } from 'next-auth/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Bookmark, CalendarDays, ChevronDown, LogIn, LogOut, Plus, Shield } from 'lucide-react'
+import { createSupabaseBrowserClient } from '@/lib/supabase/client'
+
+type SessionUser = Awaited<ReturnType<ReturnType<typeof createSupabaseBrowserClient>['auth']['getUser']>>['data']['user']
 
 export function Header() {
-  const { data: session, status } = useSession()
+  const router = useRouter()
+  const [user, setUser] = useState<SessionUser | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient()
+
+    const syncUser = async () => {
+      const { data } = await supabase.auth.getUser()
+      setUser(data.user ?? null)
+    }
+
+    syncUser()
+    const { data: listener } = supabase.auth.onAuthStateChange(() => {
+      syncUser()
+    })
+
+    return () => listener.subscription.unsubscribe()
+  }, [])
+
+  const isAdmin = Boolean(user?.email?.endsWith('@1ph.dev'))
 
   return (
     <header className="sticky top-0 z-50 bg-bg/95 backdrop-blur-sm border-b border-border">
@@ -19,13 +42,13 @@ export function Header() {
           </div>
 
           <div className="flex items-center gap-3">
-            {session && (
+            {user && (
               <Link
                 href="/calendar"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-chip border border-border text-text-muted text-sm font-mono hover:border-accent hover:text-accent transition-all duration-300"
                 aria-label="Registered Hackathons Calendar"
               >
-                <span>🗓</span>
+                <CalendarDays className="h-4 w-4" />
                 <span className="hidden sm:inline">Calendar</span>
               </Link>
             )}
@@ -33,65 +56,68 @@ export function Header() {
               href="/submit"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-chip border border-border text-text-muted text-sm font-mono hover:border-accent hover:text-accent transition-all duration-300"
             >
-              <span className="text-accent font-bold">+</span>
+              <Plus className="h-4 w-4 text-accent" />
               Submit
             </Link>
 
-            {status === 'loading' ? (
-              <div className="w-20 h-7 bg-card rounded-chip animate-pulse" />
-            ) : session ? (
+            {user ? (
               <div className="relative">
                 <button
-                  onClick={() => setMenuOpen(!menuOpen)}
+                  onClick={() => setMenuOpen((value) => !value)}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-chip border border-border text-text-muted text-sm font-mono hover:border-accent transition-all duration-150"
                 >
-                  {session.user?.image && (
+                  {user.user_metadata?.avatar_url && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={session.user.image} alt="avatar" className="w-5 h-5 rounded-full" />
+                    <img src={user.user_metadata.avatar_url} alt="avatar" className="w-5 h-5 rounded-full" />
                   )}
                   <span className="hidden sm:block max-w-[100px] truncate">
-                    {session.user?.name?.split(' ')[0]}
+                    {user.user_metadata?.full_name?.split(' ')[0] ?? user.email?.split('@')[0] ?? 'You'}
                   </span>
-                  <span className="text-xs">▾</span>
+                  <ChevronDown className="h-3 w-3" />
                 </button>
 
                 {menuOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-                    <div className="absolute right-0 top-full mt-1 w-40 bg-card border border-border rounded-card shadow-lg overflow-hidden z-50 animate-fade-in">
-                    <Link
-                      href="/bookmarks"
-                      className="block px-4 py-2.5 text-sm font-mono text-text-muted hover:text-text-primary hover:bg-tag-bg transition-colors"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Bookmarks
-                    </Link>
-                    {(session.user as { role?: string })?.role === 'ADMIN' && (
+                    <div className="absolute right-0 top-full mt-1 w-44 bg-card border border-border rounded-card shadow-lg overflow-hidden z-50 animate-fade-in">
                       <Link
-                        href="/admin"
-                        className="block px-4 py-2.5 text-sm font-mono text-text-muted hover:text-text-primary hover:bg-tag-bg transition-colors border-t border-border"
+                        href="/bookmarks"
+                        className="block px-4 py-2.5 text-sm font-mono text-text-muted hover:text-text-primary hover:bg-tag-bg transition-colors"
                         onClick={() => setMenuOpen(false)}
                       >
-                        Admin
+                        <span className="inline-flex items-center gap-2"><Bookmark className="h-3.5 w-3.5" />Bookmarks</span>
                       </Link>
-                    )}
-                    <button
-                      onClick={() => { signOut(); setMenuOpen(false) }}
-                      className="w-full text-left px-4 py-2.5 text-sm font-mono text-text-muted hover:text-text-primary hover:bg-tag-bg transition-colors border-t border-border"
-                    >
-                      Sign out
-                    </button>
-                  </div>
+                      {isAdmin && (
+                        <Link
+                          href="/admin"
+                          className="block px-4 py-2.5 text-sm font-mono text-text-muted hover:text-text-primary hover:bg-tag-bg transition-colors border-t border-border"
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          <span className="inline-flex items-center gap-2"><Shield className="h-3.5 w-3.5" />Admin</span>
+                        </Link>
+                      )}
+                      <button
+                        onClick={async () => {
+                          await createSupabaseBrowserClient().auth.signOut()
+                          setMenuOpen(false)
+                          router.refresh()
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-mono text-text-muted hover:text-text-primary hover:bg-tag-bg transition-colors border-t border-border"
+                      >
+                        <span className="inline-flex items-center gap-2"><LogOut className="h-3.5 w-3.5" />Sign out</span>
+                      </button>
+                    </div>
                   </>
                 )}
               </div>
             ) : (
-              <button
-                onClick={() => signIn()}
-                className="px-3 py-1.5 rounded-chip border border-border text-text-muted text-sm font-mono hover:border-accent hover:text-accent transition-all duration-150"
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-chip border border-border text-text-muted text-sm font-mono hover:border-accent hover:text-accent transition-all duration-150"
               >
+                <LogIn className="h-4 w-4" />
                 Login
-              </button>
+              </Link>
             )}
           </div>
         </div>

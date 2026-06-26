@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db'
+import { shouldUseDemoData } from '@/lib/demo-data'
 
 export default async function AdminHackathonsPage({
   searchParams,
@@ -11,7 +12,7 @@ export default async function AdminHackathonsPage({
   if (params.status) where.status = params.status
   if (params.tier) where.prestigeTier = params.tier
 
-  const hackathons = await prisma.hackathon.findMany({
+  const hackathons = shouldUseDemoData() ? [] : await prisma.hackathon.findMany({
     where,
     orderBy: { createdAt: 'desc' },
     take: 100,

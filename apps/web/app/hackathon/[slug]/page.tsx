@@ -5,13 +5,16 @@ import { PrestigeBadge } from '@/components/PrestigeBadge'
 import { StatusChip } from '@/components/StatusChip'
 import { BookmarkButton } from '@/components/BookmarkButton'
 import { formatDeadline, formatPrize, formatFee } from '@/lib/formatters'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireSupabaseUser } from '@/lib/auth'
+import { demoHackathons, findDemoHackathon, shouldUseDemoData } from '@/lib/demo-data'
 
 export const revalidate = 1800
+export const dynamic = 'force-dynamic'
 export const dynamicParams = true
 
 export async function generateStaticParams() {
+  if (shouldUseDemoData()) return demoHackathons.map((row) => ({ slug: row.slug }))
+
   const rows = await prisma.hackathon
     .findMany({
       where: { status: { in: ['OPEN', 'CLOSING_SOON', 'UPCOMING'] } },
@@ -25,6 +28,21 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
+  if (shouldUseDemoData()) {
+    const h = findDemoHackathon(slug)
+    if (!h) return {}
+    const desc = h.longDescription || h.description
+    return {
+      title: `${h.title} — ${h.organizerName} | 1ph`,
+      description: desc?.slice(0, 160),
+      openGraph: {
+        title: h.title,
+        description: desc?.slice(0, 160),
+        images: [`/api/og?slug=${slug}`],
+      },
+    }
+  }
+
   const h = await prisma.hackathon
     .findUnique({
       where: { slug },
@@ -70,14 +88,16 @@ function safeTag(tag: string): string {
 
 export default async function HackathonDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const h = await prisma.hackathon.findUnique({ where: { slug } })
+  const h = shouldUseDemoData()
+    ? findDemoHackathon(slug)
+    : await prisma.hackathon.findUnique({ where: { slug } })
   if (!h) notFound()
 
-  const session = await getServerSession(authOptions)
-  const userId = (session?.user as { id?: string })?.id
+  const session = shouldUseDemoData() ? null : await requireSupabaseUser()
+  const userId = session?.user.id
 
   let isBookmarked = false
-  if (userId) {
+  if (userId && !shouldUseDemoData()) {
     const bm = await prisma.bookmark
       .findUnique({
         where: { userId_hackathonId: { userId, hackathonId: h.id } },
@@ -91,6 +111,7 @@ export default async function HackathonDetailPage({ params }: { params: Promise<
   const fee = formatFee(h.entryFee ? Number(h.entryFee) : null, h.entryFeeCurrency)
   const deadline = formatDeadline(h.registrationClose)
   const safeApplyUrl = h.applyUrl.startsWith('http') ? h.applyUrl : `https://${h.applyUrl}`
+  const registrationCloseDate = h.registrationClose ? new Date(h.registrationClose) : null
 
   // Sanitize theme tags — strip raw JSON objects
   const cleanTags = h.themeTags
@@ -130,11 +151,13 @@ export default async function HackathonDetailPage({ params }: { params: Promise<
           h.themeTags && h.themeTags.length > 0
             ? `Key themes and tracks include ${h.themeTags.slice(0, 4).map((t: string) => safeTag(t)).filter(Boolean).join(', ')}.`
             : '',
-          `Registration closes on ${new Date(h.registrationClose).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}. Don't miss the deadline — apply early to secure your spot.`,
+          registrationCloseDate
+            ? `Registration closes on ${registrationCloseDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}. Don't miss the deadline — apply early to secure your spot.`
+            : 'Registration timing has not been announced yet. Check the official application page for the latest schedule.',
         ].filter(Boolean).join(' '),
       ].filter((p) => p.length > 20)
 
-  const jsonLd = {
+  const jsonLd = h.eventStart ? {
     '@context': 'https://schema.org',
     '@type': 'Event',
     name: h.title,
@@ -158,14 +181,16 @@ export default async function HackathonDetailPage({ params }: { params: Promise<
       priceCurrency: h.entryFeeCurrency ?? 'USD',
       url: h.applyUrl,
     },
-  }
+  } : null
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
 
       <div className="max-w-2xl mx-auto space-y-8 pt-4">
         {/* Header */}
@@ -282,7 +307,7 @@ export default async function HackathonDetailPage({ params }: { params: Promise<
             <h2 className="font-serif text-xl text-text-primary mb-3">Timeline</h2>
             <ul className="space-y-2 font-mono text-sm text-text-muted list-disc list-inside">
               {h.registrationOpen && <li><strong className="text-text-primary">Registration Opens:</strong> {new Date(h.registrationOpen).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric'})}</li>}
-              <li><strong className="text-text-primary">{isClosed ? 'Registration Closed:' : 'Registration Deadline:'}</strong> {new Date(h.registrationClose).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric'})}</li>
+              {registrationCloseDate && <li><strong className="text-text-primary">{isClosed ? 'Registration Closed:' : 'Registration Deadline:'}</strong> {registrationCloseDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric'})}</li>}
               {h.eventStart && <li><strong className="text-text-primary">Event Starts:</strong> {new Date(h.eventStart).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric'})}</li>}
               {h.eventEnd && <li><strong className="text-text-primary">Event Ends:</strong> {new Date(h.eventEnd).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric'})}</li>}
             </ul>

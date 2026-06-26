@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireSupabaseUser } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import { VisualCalendar } from '@/components/VisualCalendar'
@@ -7,14 +6,12 @@ import { VisualCalendar } from '@/components/VisualCalendar'
 export const revalidate = 0
 
 export default async function CalendarPage() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) redirect('/login?callbackUrl=/calendar')
-
-  const userId = (session.user as { id: string }).id
+  const session = await requireSupabaseUser()
+  if (!session) redirect('/login?callbackUrl=/calendar')
 
   // Fetch registrations
   const registrations = await prisma.registration.findMany({
-    where: { userId },
+    where: { userId: session.user.id },
     include: {
       hackathon: {
         select: {
@@ -35,7 +32,7 @@ export default async function CalendarPage() {
 
   // Fetch bookmarks just to pass to card, though we'll only pass true if it's bookmarked
   const bookmarks = await prisma.bookmark.findMany({
-    where: { userId },
+    where: { userId: session.user.id },
     select: { hackathonId: true }
   })
   const bookmarkedIds = new Set(bookmarks.map(b => b.hackathonId))

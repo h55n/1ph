@@ -1,9 +1,10 @@
 import { prisma } from '@/lib/db'
+import { shouldUseDemoData } from '@/lib/demo-data'
 
 export default async function AdminDuplicatesPage() {
   // Find hackathons with similar titles by fetching all and comparing
   // In production upgrade to Postgres similarity extension
-  const hackathons = await prisma.hackathon.findMany({
+  const hackathons = shouldUseDemoData() ? [] : await prisma.hackathon.findMany({
     select: { id: true, title: true, organizerName: true, source: true, applyUrl: true, slug: true, status: true },
     where: { status: { not: 'CLOSED' } },
     orderBy: { title: 'asc' },

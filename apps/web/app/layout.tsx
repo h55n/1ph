@@ -1,28 +1,7 @@
 import type { Metadata } from 'next'
-import { DM_Serif_Display, JetBrains_Mono, Inter } from 'next/font/google'
 import './globals.css'
 import { Header } from '@/components/Header'
 import { Providers } from '@/components/Providers'
-
-const dmSerifDisplay = DM_Serif_Display({
-  subsets: ['latin'],
-  weight: ['400'],
-  variable: '--font-serif',
-  display: 'swap',
-})
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  variable: '--font-mono',
-  display: 'swap',
-})
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-sans',
-  display: 'swap',
-})
 
 export const metadata: Metadata = {
   title: '1ph — Every hackathon. One place.',
@@ -47,7 +26,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${dmSerifDisplay.variable} ${jetbrainsMono.variable} ${inter.variable}`}>
+    <html lang="en">
       <body className="bg-bg text-text-primary font-sans antialiased min-h-screen flex flex-col">
         <Providers>
           <Header />

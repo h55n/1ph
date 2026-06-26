@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db'
+import { shouldUseDemoData } from '@/lib/demo-data'
 
 export default async function AdminSubmissionsPage({
   searchParams,
@@ -9,7 +10,7 @@ export default async function AdminSubmissionsPage({
   const VALID = ['PENDING', 'APPROVED', 'REJECTED', 'all']
   const statusFilter = VALID.includes(params.status ?? '') ? params.status : 'PENDING'
 
-  const submissions = await prisma.organizerSubmission.findMany({
+  const submissions = shouldUseDemoData() ? [] : await prisma.organizerSubmission.findMany({
     where: statusFilter === 'all' ? {} : { status: statusFilter as 'PENDING' | 'APPROVED' | 'REJECTED' },
     orderBy: { createdAt: 'desc' },
     take: 50,

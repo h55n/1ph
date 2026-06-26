@@ -1,7 +1,5 @@
 """
-dorahacks.py — DoraHacks connector.
-Method: Playwright (JS-rendered SPA, no public REST API available).
-Scrapes https://dorahacks.io/hackathon with headless browser.
+dorahacks.py - DoraHacks connector.
 Uses DoraHacks API endpoint as primary, Playwright as fallback.
 """
 import random
@@ -10,7 +8,7 @@ import re
 from .base import BaseConnector, ConnectorResult, RawHackathon
 
 LIST_URL = "https://dorahacks.io/hackathon"
-API_URL = "https://dorahacks.io/api/hackathon/?limit=50&offset=0&is_active=true&ordering=-created"
+API_URL = "https://dorahacks.io/api/hackathon/?limit=50&offset={offset}&is_active=true&ordering=-created"
 
 
 def _parse_prize(text: str):
@@ -31,28 +29,36 @@ class DoraHacksConnector(BaseConnector):
     SCOPE = "GLOBAL"
 
     def _try_api(self) -> list:
-        """Try DoraHacks REST API first — much more reliable than scraping."""
+        """Try DoraHacks REST API first - much more reliable than scraping."""
         try:
             import httpx
             with httpx.Client(timeout=20, follow_redirects=True) as client:
-                r = client.get(
-                    API_URL,
-                    headers={
-                        "User-Agent": "Mozilla/5.0 (compatible; 1ph-bot/1.0)",
-                        "Accept": "application/json",
-                        "Referer": "https://dorahacks.io/hackathon",
-                    }
-                )
-                if r.status_code == 200:
+                records = []
+                seen = set()
+                for offset in range(0, 200, 50):
+                    r = client.get(
+                        API_URL.format(offset=offset),
+                        headers={
+                            "User-Agent": "Mozilla/5.0 (compatible; 1ph-bot/1.0)",
+                            "Accept": "application/json",
+                            "Referer": "https://dorahacks.io/hackathon",
+                        }
+                    )
+                    if r.status_code != 200:
+                        break
                     data = r.json()
                     items = data.get("results") or data.get("data") or []
-                    records = []
+                    if not items:
+                        break
                     for item in items:
                         try:
                             title = item.get("title") or item.get("name") or ""
                             if not title:
                                 continue
                             slug_or_id = item.get("slug") or item.get("id") or ""
+                            if slug_or_id in seen:
+                                continue
+                            seen.add(slug_or_id)
                             apply_url = f"https://dorahacks.io/hackathon/{slug_or_id}"
                             prize = item.get("prize_pool") or item.get("total_prize")
                             description = item.get("description") or item.get("intro") or None
@@ -70,9 +76,9 @@ class DoraHacksConnector(BaseConnector):
                             ))
                         except Exception:
                             continue
-                    if records:
-                        print(f"[{self.SOURCE}] API returned {len(records)} records")
-                        return records
+                if records:
+                    print(f"[{self.SOURCE}] API returned {len(records)} records")
+                    return records
         except Exception as e:
             print(f"[{self.SOURCE}] API attempt failed: {e}")
         return []
@@ -80,12 +86,10 @@ class DoraHacksConnector(BaseConnector):
     def fetch(self) -> ConnectorResult:
         from playwright.sync_api import sync_playwright
 
-        # Try API first
         api_records = self._try_api()
         if api_records:
             return ConnectorResult(source=self.SOURCE, records=api_records, status="SUCCESS", error=None)
 
-        # Fallback: Playwright scraper
         records = []
         error = None
 
@@ -106,12 +110,10 @@ class DoraHacksConnector(BaseConnector):
                     page.goto(LIST_URL, timeout=60000, wait_until="domcontentloaded")
                     page.wait_for_timeout(6000)
 
-                    # Scroll to load lazy-loaded cards
                     for _ in range(4):
                         page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                         page.wait_for_timeout(random.randint(1500, 2500))
 
-                    # DoraHacks selectors (try many since they change frequently)
                     SELECTORS = [
                         ".hackathon-card",
                         "[class*='hackathon-card']",

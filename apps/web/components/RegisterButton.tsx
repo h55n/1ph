@@ -1,12 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 export function RegisterButton({ hackathonId, initialRegistered = false }: { hackathonId: string; initialRegistered?: boolean }) {
-  const { data: session } = useSession()
   const router = useRouter()
   const [registered, setRegistered] = useState(initialRegistered)
   const [loading, setLoading] = useState(false)
@@ -14,24 +12,20 @@ export function RegisterButton({ hackathonId, initialRegistered = false }: { hac
   async function toggle(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    if (!session) { 
-      router.push(`/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`)
-      return 
-    }
     setLoading(true)
     const prev = registered
     setRegistered(!prev)
     try {
-      if (prev) {
-        const res = await fetch(`/api/registrations/${hackathonId}`, { method: 'DELETE' })
-        if (!res.ok) setRegistered(prev)
-      } else {
-        const res = await fetch('/api/registrations', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ hackathonId }),
-        })
-        if (!res.ok) setRegistered(prev)
+      const res = await fetch(prev ? `/api/registrations/${hackathonId}` : '/api/registrations', {
+        method: prev ? 'DELETE' : 'POST',
+        headers: prev ? undefined : { 'Content-Type': 'application/json' },
+        body: prev ? undefined : JSON.stringify({ hackathonId }),
+      })
+      if (res.status === 401) {
+        router.push(`/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`)
+        setRegistered(prev)
+      } else if (!res.ok) {
+        setRegistered(prev)
       }
     } catch {
       setRegistered(prev)

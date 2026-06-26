@@ -1,17 +1,14 @@
 import { redirect } from 'next/navigation'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireSupabaseUser } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { HackathonCard } from '@/components/HackathonCard'
 
 export default async function BookmarksPage() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) redirect('/login?callbackUrl=/bookmarks')
-
-  const userId = (session.user as { id: string }).id
+  const session = await requireSupabaseUser()
+  if (!session) redirect('/login?callbackUrl=/bookmarks')
 
   const bookmarks = await prisma.bookmark.findMany({
-    where: { userId },
+    where: { userId: session.user.id },
     include: {
       hackathon: {
         select: {

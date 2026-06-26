@@ -37,33 +37,41 @@ interface EventData {
   indiaRegion?: string | null
 }
 
+function getEventDate(event: EventData) {
+  const value = event.eventStart ?? event.registrationClose
+  return value ? new Date(value) : null
+}
+
 export function VisualCalendar({ events }: { events: EventData[] }) {
   const [currentMonth, setCurrentMonth] = useState(() => {
     if (!events.length) return new Date()
     // Find the first event that ends after today (upcoming)
     const now = new Date()
     const upcoming = events.filter(e => {
-      const end = e.eventEnd ? new Date(e.eventEnd) : new Date(e.eventStart || e.registrationClose)
+      const end = e.eventEnd ? new Date(e.eventEnd) : getEventDate(e)
+      if (!end) return false
       return end >= now
     })
     
     // Sort upcoming events by start date
     upcoming.sort((a, b) => {
-      const startA = new Date(a.eventStart || a.registrationClose).getTime()
-      const startB = new Date(b.eventStart || b.registrationClose).getTime()
+      const startA = getEventDate(a)?.getTime() ?? Number.MAX_SAFE_INTEGER
+      const startB = getEventDate(b)?.getTime() ?? Number.MAX_SAFE_INTEGER
       return startA - startB
     })
 
     if (upcoming.length > 0) {
-      return new Date(upcoming[0].eventStart || upcoming[0].registrationClose)
+      return getEventDate(upcoming[0]) ?? new Date()
     }
     // Fallback to the latest event if all are past
-    const latest = events.reduce((a, b) => {
-      const startA = new Date(a.eventStart || a.registrationClose).getTime()
-      const startB = new Date(b.eventStart || b.registrationClose).getTime()
+    const datedEvents = events.filter((event) => getEventDate(event))
+    if (!datedEvents.length) return new Date()
+    const latest = datedEvents.reduce((a, b) => {
+      const startA = getEventDate(a)?.getTime() ?? 0
+      const startB = getEventDate(b)?.getTime() ?? 0
       return startA > startB ? a : b
     })
-    return new Date(latest.eventStart || latest.registrationClose)
+    return getEventDate(latest) ?? new Date()
   })
   
   const [selectedEvent, setSelectedEvent] = useState<EventData | null>(null)
@@ -123,8 +131,9 @@ export function VisualCalendar({ events }: { events: EventData[] }) {
         
         // Find events that span across this day
         const dayEvents = events.filter(e => {
-          if (!e.eventStart && !e.registrationClose) return false
-          const start = startOfDay(new Date(e.eventStart || e.registrationClose))
+          const eventDate = getEventDate(e)
+          if (!eventDate) return false
+          const start = startOfDay(eventDate)
           const end = e.eventEnd ? startOfDay(new Date(e.eventEnd)) : start
           const current = startOfDay(cloneDay)
           return current >= start && current <= end
@@ -214,7 +223,9 @@ export function VisualCalendar({ events }: { events: EventData[] }) {
                 <div className="flex items-center gap-3 text-sm font-mono text-text-muted">
                   <CalendarIcon size={16} className="text-accent" />
                   <span>
-                    {format(new Date(selectedEvent.eventStart || selectedEvent.registrationClose), 'MMMM d, yyyy')}
+                    {getEventDate(selectedEvent)
+                      ? format(getEventDate(selectedEvent)!, 'MMMM d, yyyy')
+                      : 'Date TBA'}
                   </span>
                 </div>
                 

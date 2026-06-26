@@ -1,16 +1,19 @@
 import { prisma } from '@/lib/db'
+import { shouldUseDemoData } from '@/lib/demo-data'
 import Link from 'next/link'
 
 export default async function AdminPage() {
-  const [pendingCount, totalHackathons, recentRuns] = await Promise.all([
-    prisma.organizerSubmission.count({ where: { status: 'PENDING' } }),
-    prisma.hackathon.count(),
-    prisma.pipelineRun.findMany({
-      orderBy: { runAt: 'desc' },
-      take: 10,
-      select: { source: true, runAt: true, status: true, newCount: true, updatedCount: true, closedCount: true },
-    }),
-  ])
+  const [pendingCount, totalHackathons, recentRuns] = shouldUseDemoData()
+    ? [0, 0, []]
+    : await Promise.all([
+      prisma.organizerSubmission.count({ where: { status: 'PENDING' } }),
+      prisma.hackathon.count(),
+      prisma.pipelineRun.findMany({
+        orderBy: { runAt: 'desc' },
+        take: 10,
+        select: { source: true, runAt: true, status: true, newCount: true, updatedCount: true, closedCount: true },
+      }),
+    ])
 
   const STATUS_COLOR: Record<string, string> = {
     SUCCESS: 'text-open',

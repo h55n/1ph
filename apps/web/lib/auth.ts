@@ -1,69 +1,58 @@
-import { NextAuthOptions } from 'next-auth'
-import GoogleProvider from 'next-auth/providers/google'
-import GitHubProvider from 'next-auth/providers/github'
-import CredentialsProvider from 'next-auth/providers/credentials'
-import { PrismaAdapter } from '@next-auth/prisma-adapter'
-import type { JWT } from 'next-auth/jwt'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { prisma } from './db'
-import bcrypt from 'bcrypt'
+import { createSupabaseServerClient } from './supabase/server'
 
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-    GitHubProvider({
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-    }),
-    CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null
-        }
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
-        })
-        if (!user || !user.password) {
-          return null
-        }
-        const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
-        if (!isPasswordValid) {
-          return null
-        }
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        }
-      }
-    }),
-  ],
-  callbacks: {
-    async jwt({ token, user }) {
-      const typedToken = token as JWT & { role?: string }
-      if (user) typedToken.role = ((user as { role?: string }).role ?? 'VISITOR')
-      return typedToken
+const adminEmails = new Set(
+  (process.env.ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean)
+)
+
+function providerFromUser(user: SupabaseUser) {
+  const provider = user.app_metadata?.provider
+  if (provider === 'github') return 'GITHUB'
+  if (provider === 'google') return 'GOOGLE'
+  return 'CREDENTIALS'
+}
+
+export function isAdminEmail(email?: string | null) {
+  return Boolean(email && adminEmails.has(email.toLowerCase()))
+}
+
+export async function getSupabaseUser() {
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase.auth.getUser()
+  if (error || !data.user) return null
+  return data.user
+}
+
+export async function requireSupabaseUser() {
+  const user = await getSupabaseUser()
+  if (!user) return null
+
+  const email = user.email ?? ''
+  const name = user.user_metadata?.full_name ?? user.user_metadata?.name ?? email.split('@')[0] ?? 'Builder'
+  const role = isAdminEmail(email) ? 'ADMIN' : 'VISITOR'
+
+  await prisma.user.upsert({
+    where: { id: user.id },
+    update: {
+      email,
+      name,
+      avatarUrl: user.user_metadata?.avatar_url ?? null,
+      role,
+      provider: providerFromUser(user) as 'GOOGLE' | 'GITHUB' | 'CREDENTIALS',
     },
-    async session({ session, token }) {
-      if (session.user) {
-        const typedToken = token as JWT & { role?: string }
-        const sessionUser = session.user as typeof session.user & { id?: string; role?: string }
-        sessionUser.id = typedToken.sub
-        sessionUser.role = typedToken.role ?? 'VISITOR'
-      }
-      return session
+    create: {
+      id: user.id,
+      email,
+      name,
+      avatarUrl: user.user_metadata?.avatar_url ?? null,
+      role,
+      provider: providerFromUser(user) as 'GOOGLE' | 'GITHUB' | 'CREDENTIALS',
     },
-  },
-  pages: { signIn: '/login' },
-  session: { strategy: 'jwt' },
-  secret: process.env.NEXTAUTH_SECRET,
+  })
+
+  return { user, role }
 }

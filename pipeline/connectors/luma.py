@@ -33,72 +33,64 @@ class LumaConnector(BaseConnector):
                 page = context.new_page()
 
                 # Popular tech cities for discovery
-                cities = ["san-francisco", "bengaluru", "london", "new-york", "pune", "delhi", "mumbai", "hyderabad", "chennai"]
-                
+                cities = ["san-francisco", "bengaluru", "london", "new-york", "pune", "delhi", "mumbai", "hyderabad", "chennai", "singapore", "berlin", "toronto"]
+
+                seen_slugs = set()
                 for city in cities:
                     url = f"https://lu.ma/{city}"
                     print(f"[{self.SOURCE}] Scraping city: {city} ({url})")
-                    
+
                     try:
                         page.goto(url, timeout=30000, wait_until="domcontentloaded")
-                        page.wait_for_timeout(2000)
+                        page.wait_for_timeout(2500)
+                        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                        page.wait_for_timeout(2500)
                     except PlaywrightTimeoutError:
                         print(f"[{self.SOURCE}] Timeout loading city: {city}")
                         continue
 
-                # Wait for any links
-                page.wait_for_timeout(3000)
-                
-                links = page.locator("a[href^='/']").all()
-                print(f"[{self.SOURCE}] Found {len(links)} raw links on page.")
+                    links = page.locator("a[href^='/']").all()
+                    print(f"[{self.SOURCE}] Found {len(links)} raw links on city page.")
 
-                seen_slugs = set()
-
-                for link in links:
-                    try:
-                        href = link.get_attribute("href")
-                        if not href or href == "/" or href.startswith("/explore") or href.startswith("/search") or href.startswith("/create") or href.startswith("/home") or href.startswith("/calendar"):
-                            continue
-
-                        # Slugs usually contain - or are just short alphanumerics
-                        slug = href.lstrip("/")
-                        if len(slug) < 4 or " " in slug:
-                            continue
-                            
-                        # Extract title safely
+                    for link in links:
                         try:
-                            title = link.inner_text().strip().split('\n')[0]
-                        except:
+                            href = link.get_attribute("href")
+                            if not href or href == "/" or href.startswith("/explore") or href.startswith("/search") or href.startswith("/create") or href.startswith("/home") or href.startswith("/calendar"):
+                                continue
+
+                            slug = href.lstrip("/")
+                            if len(slug) < 4 or " " in slug or slug in seen_slugs:
+                                continue
+
+                            try:
+                                title = link.inner_text().strip().split('\n')[0]
+                            except Exception:
+                                continue
+
+                            if not title or len(title) < 5 or ("hackathon" not in title.lower() and "hack" not in title.lower() and "build" not in title.lower() and "dev" not in title.lower()):
+                                continue
+
+                            seen_slugs.add(slug)
+                            apply_url = f"https://lu.ma/{slug}"
+                            text_content = link.inner_text()
+
+                            mode = "OFFLINE" if "in person" in text_content.lower() or "offline" in text_content.lower() else "ONLINE"
+
+                            records.append(RawHackathon(
+                                source_id=f"luma-{slug}",
+                                title=title,
+                                organizer_name="Luma Host",
+                                apply_url=apply_url,
+                                registration_close="2099-12-31",
+                                description=text_content.replace('\n', ' ')[:500],
+                                prize_pool=None,
+                                prize_currency="USD",
+                                mode=mode,
+                                scope="GLOBAL",
+                                sponsors=["lu.ma"]
+                            ))
+                        except Exception:
                             continue
-
-                        if not title or len(title) < 5 or ("hackathon" not in title.lower() and "hack" not in title.lower() and "build" not in title.lower()):
-                            continue
-
-                        if slug in seen_slugs:
-                            continue
-                        seen_slugs.add(slug)
-
-                        apply_url = f"https://lu.ma/{slug}"
-                        text_content = link.inner_text()
-                        
-                        mode = "OFFLINE" if "in person" in text_content.lower() or "offline" in text_content.lower() else "ONLINE"
-                        
-                        records.append(RawHackathon(
-                            source_id=f"luma-{slug}",
-                            title=title,
-                            organizer_name="Luma Host",
-                            apply_url=apply_url,
-                            registration_close="2099-12-31",
-                            description=text_content.replace('\n', ' ')[:500],
-                            prize_pool=None,
-                            prize_currency="USD",
-                            mode=mode,
-                            scope="GLOBAL",
-                            sponsors=["lu.ma"]
-                        ))
-
-                    except Exception as e:
-                        continue
 
                 browser.close()
 

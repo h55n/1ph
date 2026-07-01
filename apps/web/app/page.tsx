@@ -163,13 +163,18 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
     andArr.push({ OR: cityOr })
   }
 
-  const SORT_MAP: Record<string, Prisma.HackathonOrderByWithRelationInput> = {
-    prestige: { prestigeTier: 'asc' },
+  const SORT_MAP: Record<string, Prisma.HackathonOrderByWithRelationInput | Prisma.HackathonOrderByWithRelationInput[]> = {
+    prestige: [
+      { prestigeTier: 'asc' },
+      { registrationClose: 'asc' }
+    ],
     deadline: { registrationClose: 'asc' },
     prize:    { prizePool: 'desc' },
     newest:   { createdAt: 'desc' },
   }
-  const orderBy = SORT_MAP[sort ?? 'newest'] ?? SORT_MAP.newest
+  
+  // Default to prestige so it naturally mixes T1/T2 hackathons and highlights best ones
+  const orderBy = SORT_MAP[sort ?? 'prestige'] ?? SORT_MAP.prestige
 
   const [hackathonsSettled, totalSettled] = await Promise.allSettled([
     prisma.hackathon.findMany({

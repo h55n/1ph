@@ -1,1 +1,0 @@
-postgresql://postgres:Antigravity1ph!@db.elllssyqdcihuaqudnfd.supabase.co:5432/postgres

@@ -1,0 +1,1 @@
+postgresql://postgres:REDACTED_DB_PASSWORD@db.elllssyqdcihuaqudnfd.supabase.co:5432/postgres

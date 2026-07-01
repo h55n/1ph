@@ -8,9 +8,6 @@
       "env": [
         "DATABASE_URL",
         "DIRECT_URL",
-        "NEXT_PUBLIC_SUPABASE_URL",
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
         "NEXTAUTH_URL",
         "NEXTAUTH_SECRET",
         "GOOGLE_CLIENT_ID",
@@ -19,7 +16,6 @@
         "GITHUB_CLIENT_SECRET",
         "REVALIDATE_SECRET",
         "ADMIN_EMAIL",
-        "SUPABASE_SERVICE_KEY",
         "WEB_REVALIDATE_URL",
         "WEB_REVALIDATE_SECRET"
       ]

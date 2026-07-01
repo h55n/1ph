@@ -5,19 +5,17 @@ Also checks URL health and increments url_health_fails.
 """
 from datetime import date, datetime, timezone
 import httpx
+from psycopg2.extras import DictCursor
 
+from pipeline.db.client import get_connection
 
 def _today() -> date:
     return datetime.now(timezone.utc).date()
 
-
 def calculate_status(reg_close_str: str, reg_open_str: str = None) -> str:
-    """
-    Pure function — given date strings, returns the correct HackStatus.
-    """
     today = _today()
     try:
-        reg_close = date.fromisoformat(reg_close_str[:10])
+        reg_close = date.fromisoformat(str(reg_close_str)[:10])
     except (ValueError, TypeError):
         return "OPEN"
 
@@ -28,7 +26,7 @@ def calculate_status(reg_close_str: str, reg_open_str: str = None) -> str:
 
     if reg_open_str:
         try:
-            reg_open = date.fromisoformat(reg_open_str[:10])
+            reg_open = date.fromisoformat(str(reg_open_str)[:10])
             if today < reg_open:
                 return "UPCOMING"
         except (ValueError, TypeError):
@@ -36,9 +34,7 @@ def calculate_status(reg_close_str: str, reg_open_str: str = None) -> str:
 
     return "OPEN"
 
-
 def _check_url_health(url: str) -> bool:
-    """Returns True if URL is alive (2xx/3xx), False otherwise."""
     try:
         with httpx.Client(timeout=10, follow_redirects=True) as client:
             r = client.head(url, headers={"User-Agent": "1ph-bot/1.0"})
@@ -49,24 +45,14 @@ def _check_url_health(url: str) -> bool:
     except Exception:
         return False
 
-
-def run_sweep(supabase_client) -> dict:
-    """
-    Fetches all hackathons (including CLOSED ones that haven't been deleted yet),
-    recalculates their status, checks URL health, and bulk-updates the DB.
-
-    Returns a summary dict.
-    """
+def run_sweep(client) -> dict:
     summary = {"updated": 0, "closed": 0, "url_flagged": 0, "errors": 0, "deleted": 0}
 
     try:
-        # Fetch all hackathons. 
-        # We need to fetch CLOSED ones too in case they reopened.
-        response = supabase_client.table("Hackathon").select(
-            "id, registrationClose, registrationOpen, status, applyUrl, urlHealthFails"
-        ).execute()
-
-        rows = response.data or []
+        with get_connection() as conn:
+            with conn.cursor(cursor_factory=DictCursor) as cur:
+                cur.execute('SELECT id, "registrationClose", "registrationOpen", status, "applyUrl", "urlHealthFails" FROM "Hackathon"')
+                rows = [dict(r) for r in cur.fetchall()]
     except Exception as e:
         print(f"[status_sweep] Failed to fetch rows: {e}")
         summary["errors"] += 1
@@ -81,28 +67,21 @@ def run_sweep(supabase_client) -> dict:
                 row.get("registrationOpen"),
             )
 
-            # If the status changed, we update
             if new_status != row.get("status"):
                 update = {"id": row["id"], "status": new_status}
-                
                 if new_status == "CLOSED":
                     summary["closed"] += 1
-                
                 updates.append(update)
 
-            # URL health check for non-CLOSED hackathons
-            # (only if we didn't just mark it as CLOSED)
             current_fails = row.get("urlHealthFails") or 0
             url = row.get("applyUrl", "")
             
-            # We only check health for things that ARE or ARE BECOMING active
             effective_status = new_status if any(u.get("id") == row["id"] for u in updates) else row.get("status")
 
             if url and effective_status != "CLOSED":
                 alive = _check_url_health(url)
                 if not alive:
                     new_fails = current_fails + 1
-                    # Find existing update or create new one
                     existing_update = next((u for u in updates if u["id"] == row["id"]), None)
                     if existing_update:
                         existing_update["urlHealthFails"] = new_fails
@@ -111,7 +90,6 @@ def run_sweep(supabase_client) -> dict:
                             summary["closed"] += 1
                     else:
                         updates.append({"id": row["id"], "urlHealthFails": new_fails})
-                    
                     summary["url_flagged"] += 1
                 else:
                     if current_fails > 0:
@@ -120,36 +98,39 @@ def run_sweep(supabase_client) -> dict:
                             existing_update["urlHealthFails"] = 0
                         else:
                             updates.append({"id": row["id"], "urlHealthFails": 0})
-
         except Exception as e:
             print(f"[status_sweep] Error processing row {row.get('id')}: {e}")
             summary["errors"] += 1
 
-    # Batch update in chunks of 50
     chunk_size = 50
     for i in range(0, len(updates), chunk_size):
         chunk = updates[i : i + chunk_size]
         try:
-            for record in chunk:
-                rid = record.pop("id")
-                supabase_client.table("Hackathon").update(record).eq("id", rid).execute()
-                record["id"] = rid  # restore for logging
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    for record in chunk:
+                        rid = record.pop("id")
+                        keys = list(record.keys())
+                        values = list(record.values())
+                        set_clause = ", ".join([f'"{k}" = %s' for k in keys])
+                        query = f'UPDATE "Hackathon" SET {set_clause} WHERE id = %s'
+                        params = values + [rid]
+                        cur.execute(query, params)
+                        record["id"] = rid
+                conn.commit()
             summary["updated"] += len(chunk)
         except Exception as e:
             print(f"[status_sweep] Batch update error: {e}")
             summary["errors"] += 1
 
-    # Delete hackathons that have been CLOSED and whose registration deadline
-    # passed more than 7 days ago. We use registrationClose (immutable) instead
-    # of updatedAt (which resets every pipeline sync, so the old logic never
-    # actually triggered deletion).
     from datetime import timedelta
     cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
     try:
-        result = supabase_client.table("Hackathon").delete().eq(
-            "status", "CLOSED"
-        ).lt("registrationClose", cutoff).execute()
-        deleted_count = len(result.data) if result.data else 0
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute('DELETE FROM "Hackathon" WHERE status = %s AND "registrationClose" < %s', ('CLOSED', cutoff))
+                deleted_count = cur.rowcount
+            conn.commit()
         summary["deleted"] = deleted_count
         print(f"[status_sweep] Deleted {deleted_count} CLOSED hackathons with deadline before {cutoff[:10]}")
     except Exception as e:

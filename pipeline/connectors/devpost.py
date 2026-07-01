@@ -1,141 +1,149 @@
 """
-devpost.py — Devpost connector. JS-rendered, needs Playwright.
-Includes anti-block: random delays, realistic user-agent, PARTIAL on rate-limit.
+devpost.py — Devpost connector.
+Uses the undocumented Devpost JSON API — much faster and WAF-safe vs Playwright.
+Falls back to Playwright if the API changes.
 """
-import time
-import random
+import re
 
-from tenacity import retry, stop_after_attempt, wait_exponential
+import httpx
 
 from .base import BaseConnector, ConnectorResult, RawHackathon
 
-LIST_URL = "https://devpost.com/hackathons?challenge_type[]=online&status[]=open&status[]=upcoming"
+API_URL = "https://devpost.com/api/hackathons?challenge_type[]=online&status[]=open&status[]=upcoming&page={page}&per_page=24"
+
+UA = "Mozilla/5.0 (compatible; 1ph-bot/1.0)"
+
+
+def _clean_prize(text: str):
+    """Extract float prize from a possibly HTML-containing string."""
+    if not text:
+        return None
+    # Strip HTML tags
+    clean = re.sub(r"<[^>]+>", "", text)
+    clean = clean.replace(",", "").replace("$", "").strip()
+    nums = re.findall(r"\d+(?:\.\d+)?", clean)
+    if nums:
+        try:
+            return float(nums[0])
+        except ValueError:
+            pass
+    return None
+
+
+def _parse_date(date_str: str):
+    """Parse dates like 'May 19 - Aug 17, 2026' to extract end date."""
+    if not date_str:
+        return None
+    import re
+    # Look for a final date pattern
+    months = {
+        "jan": "01", "feb": "02", "mar": "03", "apr": "04", "may": "05",
+        "jun": "06", "jul": "07", "aug": "08", "sep": "09", "oct": "10",
+        "nov": "11", "dec": "12"
+    }
+    # Try to extract the end date (second date after dash)
+    parts = re.split(r"\s*-\s*", date_str)
+    target = parts[-1].strip() if len(parts) > 1 else parts[0].strip()
+    m = re.search(r"(\w{3})\w*\s+(\d+),?\s*(\d{4})", target, re.IGNORECASE)
+    if m:
+        mon = months.get(m.group(1).lower(), "01")
+        day = m.group(2).zfill(2)
+        year = m.group(3)
+        return f"{year}-{mon}-{day}"
+    return None
 
 
 class DevpostConnector(BaseConnector):
     SOURCE = "DEVPOST"
     SCOPE = "GLOBAL"
 
-    def _parse_prize(self, text: str):
-        if not text:
-            return None
-        import re
-        text = text.replace(",", "").replace("$", "").replace("USD", "").strip()
-        nums = re.findall(r"\d+(?:\.\d+)?", text)
-        if nums:
-            try:
-                return float(nums[0])
-            except ValueError:
-                pass
-        return None
-
     def fetch(self) -> ConnectorResult:
-        from playwright.sync_api import sync_playwright
-
         records = []
         error = None
 
         try:
-            with sync_playwright() as pw:
-                browser = pw.chromium.launch(
-                    headless=True,
-                    args=["--disable-blink-features=AutomationControlled"]
-                )
-                ctx = browser.new_context(
-                    user_agent=(
-                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-                    ),
-                    viewport={"width": 1280, "height": 900},
-                )
-                page = ctx.new_page()
+            with httpx.Client(
+                timeout=25,
+                follow_redirects=True,
+                headers={
+                    "User-Agent": UA,
+                    "Accept": "application/json",
+                    "Referer": "https://devpost.com/hackathons",
+                }
+            ) as client:
+                page = 1
+                max_pages = 12
+                seen: set = set()
 
-                # Load first page
-                try:
-                    print(f"[{self.SOURCE}] Navigating to {LIST_URL}...")
-                    response = page.goto(LIST_URL, timeout=60000, wait_until="commit")
-                    if response and response.status >= 400:
-                        print(f"[{self.SOURCE}] HTTP Error: {response.status}")
-                    page.wait_for_timeout(8000)
-                    # Check for Devpost-specific card elements
-                    page.wait_for_selector("article.challenge-listing, .challenge-listing", timeout=20000)
-                except Exception as e:
-                    print(f"[{self.SOURCE}] Navigation/Selector failed: {e}")
+                while page <= max_pages:
+                    url = API_URL.format(page=page)
                     try:
-                        print(f"[{self.SOURCE}] Page content snippet: {page.content()[:500]}")
-                    except: pass
-                    browser.close()
-                    return ConnectorResult(source=self.SOURCE, records=[], status="FAILED", error=f"Navigation/Selector error: {str(e)}")
-
-                pages_scraped = 0
-                max_pages = 4  # Reduced from 8 to speed up pipeline and avoid cloudflare flagging
-
-                while pages_scraped < max_pages:
-                    try:
-                        # Wait for cards to appear
-                        page.wait_for_selector("article.challenge-listing, .challenge-listing", timeout=10000)
-                    except Exception:
+                        r = client.get(url)
+                        if r.status_code != 200:
+                            print(f"[{self.SOURCE}] HTTP {r.status_code} on page {page}, stopping")
+                            break
+                        data = r.json()
+                    except Exception as e:
+                        print(f"[{self.SOURCE}] Request error on page {page}: {e}")
                         break
 
-                    cards = page.query_selector_all("article.challenge-listing, .challenge-listing")
-                    for card in cards:
+                    hackathons = data.get("hackathons", [])
+                    if not hackathons:
+                        break
+
+                    for h in hackathons:
                         try:
-                            title_el = card.query_selector("h2, .challenge-title, .title")
-                            link_el = card.query_selector("a[href*='/hackathons/']")
-                            if not title_el or not link_el:
+                            hid = str(h.get("id", ""))
+                            if not hid or hid in seen:
+                                continue
+                            seen.add(hid)
+
+                            title = h.get("title", "").strip()
+                            if not title:
                                 continue
 
-                            title = title_el.inner_text().strip()
-                            apply_url = link_el.get_attribute("href") or ""
-                            if not apply_url.startswith("http"):
-                                apply_url = f"https://devpost.com{apply_url}"
+                            apply_url = h.get("url", "").strip()
+                            if not apply_url:
+                                apply_url = f"https://devpost.com/hackathons/{hid}"
 
-                            prize_el = card.query_selector(".prize, .prize-amount")
-                            prize_text = prize_el.inner_text().strip() if prize_el else ""
-                            prize = self._parse_prize(prize_text)
+                            org = h.get("organization_name") or "Devpost"
+                            prize = _clean_prize(h.get("prize_amount", ""))
+                            date_str = h.get("submission_period_dates", "")
+                            reg_close = _parse_date(date_str)
 
-                            deadline_el = card.query_selector(".submission-period, .date")
-                            deadline_text = deadline_el.inner_text().strip() if deadline_el else ""
+                            themes = [t.get("name", "") for t in (h.get("themes") or []) if t.get("name")]
 
-                            tags_els = card.query_selector_all(".theme, .tag")
-                            tags = [t.inner_text().strip() for t in tags_els[:5]]
-
-                            org_el = card.query_selector(".host-label, .organizer")
-                            org = org_el.inner_text().strip() if org_el else "Devpost"
+                            location = h.get("displayed_location", {})
+                            is_online = location.get("icon", "") == "globe"
+                            mode = "ONLINE" if is_online else "OFFLINE"
 
                             records.append(RawHackathon(
-                                source_id=apply_url.split("/")[-1] or apply_url,
+                                source_id=f"devpost-{hid}",
                                 title=title,
                                 organizer_name=org,
                                 apply_url=apply_url,
-                                registration_close="2099-12-31",
-                                description=deadline_text[:500] if deadline_text else None,
+                                registration_close=reg_close,
                                 prize_pool=prize,
                                 prize_currency="USD",
-                                theme_tags=tags,
-                                mode="ONLINE",
+                                theme_tags=themes,
+                                mode=mode,
                                 scope="GLOBAL",
                             ))
                         except Exception:
                             continue
 
-                    pages_scraped += 1
-
-                    # Try next page
-                    next_btn = page.query_selector("a[rel='next'], .pagination .next a")
-                    if not next_btn:
+                    meta = data.get("meta", {})
+                    total = meta.get("total_count", 0)
+                    per_page = meta.get("per_page", 9)
+                    if per_page > 0 and page * per_page >= total:
                         break
+                    page += 1
 
-                    try:
-                        next_btn.click()
-                        page.wait_for_timeout(random.randint(2500, 5000))
-                    except Exception:
-                        break
-
-                browser.close()
+                print(f"[{self.SOURCE}] API fetched {len(records)} records")
 
         except Exception as e:
             error = str(e)
+            print(f"[{self.SOURCE}] Fatal error: {e}")
 
         status = "SUCCESS" if records else ("PARTIAL" if error else "FAILED")
         return ConnectorResult(source=self.SOURCE, records=records, status=status, error=error)

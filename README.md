@@ -1,36 +1,25 @@
 <div align="center">
-  <img src="https://1ph.vercel.app/og-default.png" alt="1ph Logo" width="100%" />
-
-  <br />
-  <br />
-
-  # 1ph — Every hackathon. One place.
-  
-  **The cleanest hackathon directory on the internet.** 
-  <br />
-  Built with a self-running AI pipeline that finds, enriches, and categorizes global and local hackathons so you don't have to.
-
-  <br />
-
-  [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)](https://nextjs.org/)
-  [![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square&logo=python)](https://python.org/)
-  [![Supabase](https://img.shields.io/badge/Supabase-DB-3ECF8E?style=flat-square&logo=supabase)](https://supabase.com/)
-  [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-  [![Vercel](https://img.shields.io/badge/Vercel-Deployed-black?style=flat-square&logo=vercel)](https://1ph.vercel.app)
-
+  <img src="docs/assets/banner.png" alt="1ph — Every hackathon. One place." width="100%" />
 </div>
 
-<hr />
-
-## 🎥 Live Demo
-
-See the platform in action at [1ph.vercel.app](https://1ph.vercel.app/).
+# 1ph 🏆
 
 <div align="center">
-  <img src="docs/assets/demo.webp" alt="1ph Product Demo Animation" width="800" />
+
+[Live Site](https://1ph.vercel.app) | [Architecture Docs](docs/architecture/system-design.md) | [GitHub](https://github.com/h55n/1ph)
+
+[![LIVE](https://img.shields.io/badge/LIVE-1ph.vercel.app-F59E0B?style=flat-square&labelColor=000000)](https://1ph.vercel.app)
+[![DOCS](https://img.shields.io/badge/DOCS-Architecture-6366F1?style=flat-square&labelColor=000000)](docs/architecture/system-design.md)
+[![LICENSE](https://img.shields.io/badge/LICENSE-MIT-22C55E?style=flat-square&labelColor=000000)](LICENSE)
+[![BUILT WITH](https://img.shields.io/badge/BUILT_WITH-Next.js_14-000000?style=flat-square&logo=next.js&logoColor=white&labelColor=000000)](https://nextjs.org/)
+[![DATABASE](https://img.shields.io/badge/DATABASE-Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white&labelColor=000000)](https://supabase.com)
+[![BUILT BY](https://img.shields.io/badge/BUILT_BY-hssn-F97316?style=flat-square&labelColor=000000)](https://github.com/h55n)
+
 </div>
 
-<br />
+**The cleanest hackathon aggregator on the internet.** It's the only directory with a fully self-running AI pipeline — it scrapes 11+ sources every run, normalizes messy data, auto-assigns prestige tiers, enriches stub listings using Mistral AI, and sweeps out expired events. No ads, no noise, no manual curation. Switch between global prestige events and local India hackathons in one click. Built on Next.js 14 with a Supabase backend, deployed on Vercel, and runs a Python pipeline that just works.
+
+---
 
 ## 📖 Table of Contents
 - [Why 1ph?](#-why-1ph)
@@ -45,13 +34,13 @@ See the platform in action at [1ph.vercel.app](https://1ph.vercel.app/).
 
 ## ⚡ Why 1ph?
 
-Finding high-quality hackathons is incredibly tedious. You have to scour Devfolio, MLH, HackerEarth, Dorahacks, and endless Twitter threads just to find one that matches your timeline. 
+Finding high-quality hackathons is incredibly tedious. You have to scour Devfolio, MLH, HackerEarth, Dorahacks, and endless Twitter threads just to find one that matches your timeline.
 
 **1ph solves this by centralizing everything.**
 - **Zero Noise:** No ads, no sponsored bloat, no clutter. Just pure data.
 - **AI-Enriched:** Our pipeline uses Mistral AI to extract real deadlines, prize pools, and descriptions from otherwise vague listings.
 - **Prestige Sorted:** We automatically identify Tier 1 global hackathons and push them to the top.
-- **Insanely Fast:** Built with Next.js 14 and statically generated pages for near-instant load times.
+- **Insanely Fast:** Built with Next.js 14 and static generation for near-instant load times.
 
 ## ✨ Features
 

@@ -4,18 +4,15 @@ import { createBrowserClient } from '@supabase/ssr'
 
 let browserClient: ReturnType<typeof createBrowserClient> | undefined
 
-function getEnv(name: string) {
-  const value = process.env[name]
-  if (!value) throw new Error(`Missing env var: ${name}`)
-  return value
-}
-
 export function createSupabaseBrowserClient() {
   if (!browserClient) {
-    browserClient = createBrowserClient(
-      getEnv('NEXT_PUBLIC_SUPABASE_URL'),
-      getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY')
-    )
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!url) throw new Error('Missing env var: NEXT_PUBLIC_SUPABASE_URL')
+    if (!key) throw new Error('Missing env var: NEXT_PUBLIC_SUPABASE_ANON_KEY')
+
+    browserClient = createBrowserClient(url, key)
   }
 
   return browserClient

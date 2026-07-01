@@ -1,8 +1,7 @@
 <div align="center">
-  <img src="docs/assets/banner.png" alt="1ph — Every hackathon. One place." width="100%" />
+  <img src="docs/assets/banner.png" alt="1ph — Every hackathon. One place." width="35%" />
+  <h1>1ph 🏆</h1>
 </div>
-
-# 1ph 🏆
 
 <div align="center">
 

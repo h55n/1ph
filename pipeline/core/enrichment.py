@@ -17,10 +17,12 @@ import os
 import json
 import httpx
 from datetime import datetime, timezone
-from bs4 import BeautifulSoup
+from psycopg2.extras import DictCursor
 
 from dotenv import load_dotenv
 load_dotenv()
+
+from pipeline.db.client import get_connection
 
 MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY", "").strip().strip('"').strip("'")
 MISTRAL_MODEL = "mistral-small-latest"
@@ -111,7 +113,6 @@ Page content:
             data = r.json()
             content = data["choices"][0]["message"]["content"].strip()
 
-            # Strip markdown code fences if present
             if content.startswith("```"):
                 content = content.split("\n", 1)[1] if "\n" in content else content[3:]
                 if content.endswith("```"):
@@ -127,7 +128,7 @@ Page content:
         return None
 
 
-def run_enrichment(supabase_client) -> dict:
+def run_enrichment(client) -> dict:
     """
     Main entry point. Finds stub hackathons, enriches them via AI, updates DB.
     Returns summary dict.
@@ -138,31 +139,32 @@ def run_enrichment(supabase_client) -> dict:
         print("[enrichment] MISTRAL_API_KEY not set — skipping enrichment phase")
         return summary
 
-    # Find hackathons needing enrichment:
-    # 1. Stub deadline (2099-12-31)
-    # 2. OR missing/very short longDescription (< 100 chars)
     try:
-        # Fetch hackathons with stub deadlines (2099) OR missing deadlines (null)
-        stub_response = supabase_client.table("Hackathon").select(
-            "id, title, applyUrl, registrationClose, longDescription, description, source, organizerName"
-        ).or_("registrationClose.eq.2099-12-31T00:00:00+00:00,registrationClose.is.null").limit(MAX_ENRICH_PER_RUN).execute()
+        rows = []
+        with get_connection() as conn:
+            with conn.cursor(cursor_factory=DictCursor) as cur:
+                # Fetch hackathons with stub deadlines (2099) OR missing deadlines (null)
+                cur.execute('''
+                    SELECT id, title, "applyUrl", "registrationClose", "longDescription", description, source, "organizerName"
+                    FROM "Hackathon"
+                    WHERE "registrationClose" = '2099-12-31 00:00:00+00' OR "registrationClose" IS NULL
+                    LIMIT %s
+                ''', (MAX_ENRICH_PER_RUN,))
+                stub_rows = [dict(r) for r in cur.fetchall()]
 
-        stub_rows = stub_response.data or []
-
-        # Also fetch ones with missing longDescription that aren't stub-dated
-        short_desc_response = supabase_client.table("Hackathon").select(
-            "id, title, applyUrl, registrationClose, longDescription, description, source, organizerName"
-        ).is_("longDescription", "null").neq(
-            "registrationClose", "2099-12-31T00:00:00+00:00"
-        ).in_("status", ["OPEN", "CLOSING_SOON", "UPCOMING"]).limit(
-            MAX_ENRICH_PER_RUN
-        ).execute()
-
-        short_rows = short_desc_response.data or []
+                # Also fetch ones with missing longDescription that aren't stub-dated
+                cur.execute('''
+                    SELECT id, title, "applyUrl", "registrationClose", "longDescription", description, source, "organizerName"
+                    FROM "Hackathon"
+                    WHERE "longDescription" IS NULL
+                      AND "registrationClose" != '2099-12-31 00:00:00+00'
+                      AND status IN ('OPEN', 'CLOSING_SOON', 'UPCOMING')
+                    LIMIT %s
+                ''', (MAX_ENRICH_PER_RUN,))
+                short_rows = [dict(r) for r in cur.fetchall()]
 
         # Combine and deduplicate
         seen_ids = set()
-        rows = []
         for row in stub_rows + short_rows:
             if row["id"] not in seen_ids:
                 seen_ids.add(row["id"])
@@ -188,30 +190,25 @@ def run_enrichment(supabase_client) -> dict:
 
         print(f"[enrichment] Enriching: {title[:60]}...")
 
-        # Step 1: Fetch page text
         page_text = _fetch_page_text(url)
         if not page_text or len(page_text) < 100:
             print(f"[enrichment]   Skipped (no usable page text)")
             summary["skipped"] += 1
             continue
 
-        # Step 2: Call Mistral
         extracted = _call_mistral(page_text, title)
         if not extracted:
             print(f"[enrichment]   Skipped (AI extraction failed)")
             summary["skipped"] += 1
             continue
 
-        # Step 3: Build update payload
         update = {}
         now = datetime.now(timezone.utc).isoformat()
         update["updatedAt"] = now
 
-        # Update deadline if we got a real one
         deadline = extracted.get("registration_deadline")
         if deadline and deadline != "null" and len(deadline) == 10:
             try:
-                # Validate the date
                 from datetime import date
                 parsed = date.fromisoformat(deadline)
                 update["registrationClose"] = f"{deadline}T00:00:00+00:00"
@@ -219,7 +216,6 @@ def run_enrichment(supabase_client) -> dict:
             except ValueError:
                 pass
 
-        # Update event dates
         event_start = extracted.get("event_start")
         if event_start and event_start != "null" and len(event_start) == 10:
             try:
@@ -238,17 +234,14 @@ def run_enrichment(supabase_client) -> dict:
             except ValueError:
                 pass
 
-        # Update long description
         long_desc = extracted.get("long_description")
         if long_desc and isinstance(long_desc, str) and len(long_desc) > 100:
             update["longDescription"] = long_desc[:5000]
-            # Also update short description if current one is very short
             current_desc = row.get("description") or ""
             if len(current_desc) < 100:
                 update["description"] = long_desc[:1000]
             print(f"[enrichment]   Description: {len(long_desc)} chars")
 
-        # Update prize info if missing
         prize = extracted.get("prize_pool")
         if prize and isinstance(prize, (int, float)) and prize > 0:
             update["prizePool"] = prize
@@ -259,23 +252,19 @@ def run_enrichment(supabase_client) -> dict:
         if prize_desc and isinstance(prize_desc, str):
             update["prizeDescription"] = prize_desc[:500]
 
-        # Update team sizes if found
         if extracted.get("team_size_min") and isinstance(extracted["team_size_min"], int):
             update["teamSizeMin"] = extracted["team_size_min"]
         if extracted.get("team_size_max") and isinstance(extracted["team_size_max"], int):
             update["teamSizeMax"] = extracted["team_size_max"]
 
-        # Update mode if found
         mode = extracted.get("mode")
         if mode in ("ONLINE", "OFFLINE", "HYBRID"):
             update["mode"] = mode
 
-        # Update eligibility if found
         elig = extracted.get("eligibility")
         if elig in ("STUDENTS", "OPEN", "PROFESSIONALS"):
             update["eligibility"] = elig
 
-        # Update organizer name if found and current is generic
         org = extracted.get("organizer_name")
         current_org = row.get("organizerName", "")
         generic_orgs = {"Devpost", "DoraHacks", "HackerEarth", "HackerRank", "Unstop", "Hack2Skill", "Luma Host"}
@@ -283,17 +272,24 @@ def run_enrichment(supabase_client) -> dict:
             if current_org in generic_orgs or len(current_org) < 3:
                 update["organizerName"] = org[:255]
 
-        # Update tags
         tags = extracted.get("theme_tags")
         if tags and isinstance(tags, list) and len(tags) > 0:
             clean_tags = [str(t).strip() for t in tags if isinstance(t, str) and 2 < len(t.strip()) < 60][:8]
             if clean_tags:
                 update["themeTags"] = clean_tags
 
-        # Step 4: Apply update
-        if len(update) > 1:  # more than just updatedAt
+        if len(update) > 1:
             try:
-                supabase_client.table("Hackathon").update(update).eq("id", hackathon_id).execute()
+                keys = list(update.keys())
+                values = list(update.values())
+                set_clause = ", ".join([f'"{k}" = %s' for k in keys])
+                query = f'UPDATE "Hackathon" SET {set_clause} WHERE id = %s'
+                params = values + [hackathon_id]
+                
+                with get_connection() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(query, params)
+                    conn.commit()
                 summary["enriched"] += 1
                 print(f"[enrichment]   OK Updated {len(update)-1} fields")
             except Exception as e:

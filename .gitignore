@@ -16,6 +16,8 @@ packages/db/node_modules/
 .env.development
 .env.production
 .env.*.local
+.env.vercel
+.env.vercel.*
 apps/web/.env.local
 pipeline/.env
 
@@ -48,11 +50,8 @@ Thumbs.db
 # Turbo cache
 .turbo/
 
-.vercel
-
-.env.vercel
+.vercel/
 tmp/env_backups/
 
 # Local only logs
 change_log.md
-

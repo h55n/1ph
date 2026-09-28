@@ -131,7 +131,7 @@ function renderHackathonList(hackathons: any[], total: number, pageSize: number)
       <p className="text-sm font-mono text-text-muted mb-4">
         {total} hackathon{total !== 1 ? 's' : ''} found
       </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
         {hackathons.map((h, i) => (
           <HackathonCard
             key={h.id}
@@ -312,7 +312,7 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
       <p className="text-sm font-mono text-text-muted mb-4">
         {total} hackathon{total !== 1 ? 's' : ''} found
       </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
         {finalHackathons.map((h, i) => (
           <HackathonCard
             key={h.id}

@@ -26,8 +26,8 @@ const config: Config = {
         sans:  ['Inter', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
-        card: '8px',
-        chip: '4px',
+        card: '16px',
+        chip: '6px',
       },
       animation: {
         'fade-in':   'fadeIn 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards',

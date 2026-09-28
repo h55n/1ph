@@ -3,8 +3,17 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { Bookmark } from 'lucide-react'
 
-export function BookmarkButton({ hackathonId, initialBookmarked = false }: { hackathonId: string; initialBookmarked?: boolean }) {
+export function BookmarkButton({ 
+  hackathonId, 
+  initialBookmarked = false,
+  className 
+}: { 
+  hackathonId: string
+  initialBookmarked?: boolean
+  className?: string 
+}) {
   const router = useRouter()
   const [bookmarked, setBookmarked] = useState(initialBookmarked)
   const [loading, setLoading] = useState(false)
@@ -40,12 +49,15 @@ export function BookmarkButton({ hackathonId, initialBookmarked = false }: { hac
       disabled={loading}
       aria-label={bookmarked ? 'Remove bookmark' : 'Save hackathon'}
       className={cn(
-        'flex items-center justify-center w-9 h-9 rounded-card border transition-all duration-150',
-        bookmarked ? 'border-accent bg-accent/10 text-accent' : 'border-border text-text-muted hover:border-accent/50 hover:text-text-primary',
-        loading && 'opacity-50 cursor-not-allowed'
+        'flex items-center justify-center w-8 h-8 rounded-full border transition-all duration-200',
+        bookmarked 
+          ? 'border-accent/80 bg-accent/25 text-accent shadow-sm shadow-accent/20' 
+          : 'border-white/20 bg-black/40 backdrop-blur-md text-white/70 hover:border-white/40 hover:text-white hover:bg-black/70 shadow-sm',
+        loading && 'opacity-50 cursor-not-allowed',
+        className
       )}
     >
-      {bookmarked ? '★' : '☆'}
+      <Bookmark className={cn('w-3.5 h-3.5 transition-transform duration-200 active:scale-90', bookmarked && 'fill-current')} />
     </button>
   )
 }

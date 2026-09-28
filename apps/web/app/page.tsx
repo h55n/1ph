@@ -35,27 +35,81 @@ function filterDemoHackathons(params: SearchParams) {
   else filtered = filtered.filter((h) => ['OPEN', 'CLOSING_SOON', 'UPCOMING'].includes(h.status))
 
   if (scope && scope !== 'all') filtered = filtered.filter((h) => h.scope === scope)
-  if (theme) filtered = filtered.filter((h) => h.themeTags.some((tag) => tag.toLowerCase().includes(theme.toLowerCase())) || h.title.toLowerCase().includes(theme.toLowerCase()) || h.description.toLowerCase().includes(theme.toLowerCase()))
+
+  if (theme) {
+    const themeMap: Record<string, string[]> = {
+      "AI/ML": ["ai", "ml", "artificial intelligence", "machine learning", "deep learning", "nlp", "genai", "llm", "neural"],
+      "Web3": ["web3", "crypto", "blockchain", "ethereum", "solana", "nft", "dao", "defi", "smart contract"],
+      "Fintech": ["fintech", "finance", "banking", "payment", "trading"],
+      "Health": ["health", "medtech", "healthcare", "medical", "fitness", "bio"],
+      "Gaming": ["gaming", "game", "unity", "unreal", "godot", "vr"],
+      "Social Impact": ["social impact", "sustainability", "climate", "environment", "green", "clean"],
+      "EdTech": ["edtech", "education", "learning", "student", "school"],
+      "Hardware": ["hardware", "iot", "robotics", "embedded", "arduino"],
+      "Open": ["open", "all", "general", "beginner", "hack"],
+    }
+    const keywords = (themeMap[theme] || [theme]).map((k) => k.toLowerCase())
+    filtered = filtered.filter((h) => {
+      const inTags = h.themeTags.some((tag) => keywords.some((kw) => tag.toLowerCase().includes(kw)))
+      const inTitle = keywords.some((kw) => h.title.toLowerCase().includes(kw))
+      const inDesc = keywords.some((kw) => h.description.toLowerCase().includes(kw))
+      return inTags || inTitle || inDesc
+    })
+  }
+
   if (mode) filtered = filtered.filter((h) => h.mode === mode)
   if (eligibility) filtered = filtered.filter((h) => h.eligibility === eligibility)
   if (duration) filtered = filtered.filter((h) => h.durationType === duration)
   if (fee === 'free') filtered = filtered.filter((h) => !h.entryFee)
   if (fee === 'paid') filtered = filtered.filter((h) => Number(h.entryFee ?? 0) > 0)
   if (team === 'solo') filtered = filtered.filter((h) => h.teamSizeMax === 1)
-  if (team === '2-4') filtered = filtered.filter((h) => h.teamSizeMin <= 4 && (h.teamSizeMax ?? 99) >= 2)
+  if (team === '2-4') filtered = filtered.filter((h) => (h.teamSizeMin <= 4) && (h.teamSizeMax ?? 99) >= 2)
+  if (team === '5+') filtered = filtered.filter((h) => (h.teamSizeMax ?? 99) >= 5)
+
   if (q) {
-    const query = q.toLowerCase()
-    filtered = filtered.filter((h) => h.title.toLowerCase().includes(query) || h.organizerName.toLowerCase().includes(query) || h.themeTags.some((tag) => tag.toLowerCase().includes(query)))
+    const tokens = q.toLowerCase().trim().split(/\s+/).filter(Boolean)
+    filtered = filtered.filter((h) => {
+      const searchable = `${h.title} ${h.organizerName} ${h.themeTags.join(' ')} ${h.description} ${h.indiaRegion ?? ''} ${h.source}`.toLowerCase()
+      return tokens.every((token) => searchable.includes(token))
+    })
   }
+
   if (city) {
     const query = city.toLowerCase()
-    filtered = filtered.filter((h) => h.indiaRegion?.toLowerCase().includes(query) || h.title.toLowerCase().includes(query) || h.description.toLowerCase().includes(query))
+    const cityMap: Record<string, string[]> = {
+      delhi: ["delhi", "ncr", "noida", "gurgaon", "gurugram"],
+      bengaluru: ["bengaluru", "bangalore"],
+      mumbai: ["mumbai", "navi mumbai", "thane"],
+      pune: ["pune"],
+      hyderabad: ["hyderabad", "telangana"],
+      chennai: ["chennai", "tamil nadu"],
+    }
+    const synonyms = cityMap[query] || [query]
+    filtered = filtered.filter((h) =>
+      synonyms.some((s) =>
+        h.indiaRegion?.toLowerCase().includes(s) ||
+        h.title.toLowerCase().includes(s) ||
+        h.description.toLowerCase().includes(s)
+      )
+    )
   }
 
   filtered.sort((a, b) => {
-    if (sort === 'prestige') return a.prestigeTier.localeCompare(b.prestigeTier)
-    if (sort === 'deadline') return (a.registrationClose?.getTime() ?? 0) - (b.registrationClose?.getTime() ?? 0)
-    if (sort === 'prize') return Number(b.prizePool ?? 0) - Number(a.prizePool ?? 0)
+    if (sort === 'prestige') {
+      const tierMap: Record<string, number> = { T1: 1, T2: 2, T3: 3 }
+      const diff = (tierMap[a.prestigeTier] ?? 3) - (tierMap[b.prestigeTier] ?? 3)
+      if (diff !== 0) return diff
+      return (Number(b.prizePool ?? 0) - Number(a.prizePool ?? 0))
+    }
+    if (sort === 'deadline') {
+      const timeA = a.registrationClose ? a.registrationClose.getTime() : Infinity
+      const timeB = b.registrationClose ? b.registrationClose.getTime() : Infinity
+      return timeA - timeB
+    }
+    if (sort === 'prize') {
+      return (Number(b.prizePool ?? 0) - Number(a.prizePool ?? 0))
+    }
+    // Default: 'newest'
     return b.createdAt.getTime() - a.createdAt.getTime()
   })
 
@@ -153,6 +207,7 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
   if (fee === 'paid') andArr.push({ entryFee: { gt: 0 } })
   if (team === 'solo') andArr.push({ teamSizeMax: 1 })
   if (team === '2-4') andArr.push({ AND: [{ teamSizeMin: { lte: 4 } }, { teamSizeMax: { gte: 2 } }] })
+  if (team === '5+') andArr.push({ teamSizeMax: { gte: 5 } })
 
   if (q) {
     andArr.push({
@@ -175,17 +230,16 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
   }
 
   const SORT_MAP: Record<string, Prisma.HackathonOrderByWithRelationInput | Prisma.HackathonOrderByWithRelationInput[]> = {
+    newest:   { createdAt: 'desc' },
     prestige: [
       { prestigeTier: 'asc' },
       { registrationClose: 'asc' }
     ],
     deadline: { registrationClose: 'asc' },
     prize:    { prizePool: 'desc' },
-    newest:   { createdAt: 'desc' },
   }
   
-  // Default to prestige so it naturally mixes T1/T2 hackathons and highlights best ones
-  const orderBy = SORT_MAP[sort ?? 'prestige'] ?? SORT_MAP.prestige
+  const orderBy = SORT_MAP[sort ?? 'newest'] ?? SORT_MAP.newest
 
   const [hackathonsSettled, totalSettled] = await Promise.allSettled([
     prisma.hackathon.findMany({

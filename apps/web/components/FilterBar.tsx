@@ -98,6 +98,18 @@ export function FilterBar() {
           </div>
         )
       })}
+
+      {(FILTERS.some((f) => searchParams.has(f.key)) || searchParams.has('q') || searchParams.has('sort')) && (
+        <button
+          onClick={() => {
+            setOpenDropdown(null)
+            startTransition(() => router.push(pathname, { scroll: false }))
+          }}
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded-card border border-red-500/30 text-red-400 bg-red-500/10 text-xs font-mono hover:bg-red-500/20 transition-all duration-150"
+        >
+          ✕ Reset
+        </button>
+      )}
     </div>
   )
 }

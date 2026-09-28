@@ -15,7 +15,8 @@ export function SearchBar() {
       const params = new URLSearchParams(searchParams.toString())
       if (q) params.set('q', q)
       else params.delete('q')
-      startTransition(() => router.push(`${pathname}?${params.toString()}`))
+      params.delete('page')
+      startTransition(() => router.push(`${pathname}?${params.toString()}`, { scroll: false }))
     },
     [router, pathname, searchParams]
   )

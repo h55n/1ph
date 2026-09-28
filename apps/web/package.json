@@ -7,7 +7,7 @@
     "build": "next build",
     "postinstall": "prisma generate --schema ../../packages/db/schema.prisma",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

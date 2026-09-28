@@ -1,0 +1,48 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# Python
+pipeline
+__pycache__
+*.pyc
+.venv
+venv
+dist
+*.egg-info
+.pytest_cache
+
+# Logs
+*.log
+change_log.md
+
+# IDE
+.vscode
+.idea
+*.swp
+
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+*.md
+AGENTS.md
+
+# Build artifacts
+.turbo
+.next
+out
+
+# Local
+tmp

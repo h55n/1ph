@@ -29,7 +29,13 @@ export function Header() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  const isAdmin = Boolean(user?.email?.endsWith('@1ph.dev'))
+  const adminEmails = new Set(
+    (process.env.ADMIN_EMAILS ?? '')
+      .split(',')
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean)
+  )
+  const isAdmin = Boolean(user?.email && adminEmails.has(user.email.toLowerCase()))
 
   return (
     <header className="sticky top-0 z-50 bg-bg/95 backdrop-blur-sm border-b border-border">

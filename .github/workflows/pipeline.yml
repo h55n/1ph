@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   run-pipeline:
@@ -16,6 +16,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: master
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -32,9 +34,26 @@ jobs:
 
       - name: Run pipeline
         env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          WEB_REVALIDATE_URL: ${{ secrets.WEB_REVALIDATE_URL }}
+          WEB_REVALIDATE_SECRET: ${{ secrets.WEB_REVALIDATE_SECRET }}
         run: python pipeline/run.py
+
+      - name: Commit updated dataset if changed
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/hackathons.json apps/web/data/hackathons.json || true
+          if git diff --staged --quiet; then
+            echo "No changes in hackathons dataset"
+          else
+            git commit -m "chore(data): auto-update curated hackathons dataset [skip ci]"
+            git push origin master
+          fi
 
       - name: Revalidate frontend cache
         if: always()
@@ -48,6 +67,6 @@ jobs:
             exit 0
           fi
           curl --fail-with-body --silent \
-            -X POST "$WEB_REVALIDATE_URL" \
+            -X POST "$WEB_REVALIDATE_URL/api/revalidate" \
             -H "Authorization: Bearer $WEB_REVALIDATE_SECRET" \
             -H "Content-Type: application/json" || true

@@ -55,3 +55,9 @@ tmp/env_backups/
 
 # Local only logs
 change_log.md
+.env*
+!.env.example
+
+# Build artifacts & temp
+*.tsbuildinfo
+.temp/

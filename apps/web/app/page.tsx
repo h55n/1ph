@@ -27,76 +27,87 @@ interface SearchParams {
   page?: string
 }
 
+function filterDemoHackathons(params: SearchParams) {
+  const { scope, q, theme, mode, fee, team, eligibility, duration, sort, status, city } = params
+  let filtered = [...demoHackathons]
+
+  if (status === 'CLOSED') filtered = filtered.filter((h) => h.status === 'CLOSED')
+  else filtered = filtered.filter((h) => ['OPEN', 'CLOSING_SOON', 'UPCOMING'].includes(h.status))
+
+  if (scope && scope !== 'all') filtered = filtered.filter((h) => h.scope === scope)
+  if (theme) filtered = filtered.filter((h) => h.themeTags.some((tag) => tag.toLowerCase().includes(theme.toLowerCase())) || h.title.toLowerCase().includes(theme.toLowerCase()) || h.description.toLowerCase().includes(theme.toLowerCase()))
+  if (mode) filtered = filtered.filter((h) => h.mode === mode)
+  if (eligibility) filtered = filtered.filter((h) => h.eligibility === eligibility)
+  if (duration) filtered = filtered.filter((h) => h.durationType === duration)
+  if (fee === 'free') filtered = filtered.filter((h) => !h.entryFee)
+  if (fee === 'paid') filtered = filtered.filter((h) => Number(h.entryFee ?? 0) > 0)
+  if (team === 'solo') filtered = filtered.filter((h) => h.teamSizeMax === 1)
+  if (team === '2-4') filtered = filtered.filter((h) => h.teamSizeMin <= 4 && (h.teamSizeMax ?? 99) >= 2)
+  if (q) {
+    const query = q.toLowerCase()
+    filtered = filtered.filter((h) => h.title.toLowerCase().includes(query) || h.organizerName.toLowerCase().includes(query) || h.themeTags.some((tag) => tag.toLowerCase().includes(query)))
+  }
+  if (city) {
+    const query = city.toLowerCase()
+    filtered = filtered.filter((h) => h.indiaRegion?.toLowerCase().includes(query) || h.title.toLowerCase().includes(query) || h.description.toLowerCase().includes(query))
+  }
+
+  filtered.sort((a, b) => {
+    if (sort === 'prestige') return a.prestigeTier.localeCompare(b.prestigeTier)
+    if (sort === 'deadline') return (a.registrationClose?.getTime() ?? 0) - (b.registrationClose?.getTime() ?? 0)
+    if (sort === 'prize') return Number(b.prizePool ?? 0) - Number(a.prizePool ?? 0)
+    return b.createdAt.getTime() - a.createdAt.getTime()
+  })
+
+  return filtered
+}
+
+function renderHackathonList(hackathons: any[], total: number, pageSize: number) {
+  if (hackathons.length === 0) {
+    return (
+      <div className="text-center py-20">
+        <p className="font-serif text-2xl text-text-muted mb-2">No hackathons found.</p>
+        <p className="text-sm font-mono text-text-muted">Try adjusting your filters.</p>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <p className="text-sm font-mono text-text-muted mb-4">
+        {total} hackathon{total !== 1 ? 's' : ''} found
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {hackathons.map((h, i) => (
+          <HackathonCard
+            key={h.id}
+            hackathon={{
+              ...h,
+              prizePool: h.prizePool ? Number(h.prizePool) : null,
+              entryFee: h.entryFee ? Number(h.entryFee) : null,
+              registrationClose: h.registrationClose ? new Date(h.registrationClose) : null,
+            }}
+            index={i}
+          />
+        ))}
+      </div>
+      <Pagination totalItems={total} pageSize={pageSize} />
+    </>
+  )
+}
+
 async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const { scope, q, theme, mode, fee, team, eligibility, duration, sort, status, city, page } = await searchParams
+  const resolvedParams = await searchParams
+  const { scope, q, theme, mode, fee, team, eligibility, duration, sort, status, city, page } = resolvedParams
   const PAGE_SIZE = 16
   const parsedPage = parseInt(page ?? '1', 10)
   const pageNum = isNaN(parsedPage) ? 1 : Math.max(1, parsedPage)
 
   if (shouldUseDemoData()) {
-    let filtered = [...demoHackathons]
-
-    if (status === 'CLOSED') filtered = filtered.filter((h) => h.status === 'CLOSED')
-    else filtered = filtered.filter((h) => ['OPEN', 'CLOSING_SOON', 'UPCOMING'].includes(h.status))
-
-    if (scope && scope !== 'all') filtered = filtered.filter((h) => h.scope === scope)
-    if (theme) filtered = filtered.filter((h) => h.themeTags.some((tag) => tag.toLowerCase().includes(theme.toLowerCase())) || h.title.toLowerCase().includes(theme.toLowerCase()) || h.description.toLowerCase().includes(theme.toLowerCase()))
-    if (mode) filtered = filtered.filter((h) => h.mode === mode)
-    if (eligibility) filtered = filtered.filter((h) => h.eligibility === eligibility)
-    if (duration) filtered = filtered.filter((h) => h.durationType === duration)
-    if (fee === 'free') filtered = filtered.filter((h) => !h.entryFee)
-    if (fee === 'paid') filtered = filtered.filter((h) => Number(h.entryFee ?? 0) > 0)
-    if (team === 'solo') filtered = filtered.filter((h) => h.teamSizeMax === 1)
-    if (team === '2-4') filtered = filtered.filter((h) => h.teamSizeMin <= 4 && (h.teamSizeMax ?? 99) >= 2)
-    if (q) {
-      const query = q.toLowerCase()
-      filtered = filtered.filter((h) => h.title.toLowerCase().includes(query) || h.organizerName.toLowerCase().includes(query) || h.themeTags.some((tag) => tag.toLowerCase().includes(query)))
-    }
-    if (city) {
-      const query = city.toLowerCase()
-      filtered = filtered.filter((h) => h.indiaRegion?.toLowerCase().includes(query) || h.title.toLowerCase().includes(query) || h.description.toLowerCase().includes(query))
-    }
-
-    filtered.sort((a, b) => {
-      if (sort === 'prestige') return a.prestigeTier.localeCompare(b.prestigeTier)
-      if (sort === 'deadline') return (a.registrationClose?.getTime() ?? 0) - (b.registrationClose?.getTime() ?? 0)
-      if (sort === 'prize') return Number(b.prizePool ?? 0) - Number(a.prizePool ?? 0)
-      return b.createdAt.getTime() - a.createdAt.getTime()
-    })
-
+    const filtered = filterDemoHackathons(resolvedParams)
     const total = filtered.length
     const finalHackathons = filtered.slice((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE)
-
-    if (finalHackathons.length === 0) {
-      return (
-        <div className="text-center py-20">
-          <p className="font-serif text-2xl text-text-muted mb-2">No hackathons found.</p>
-          <p className="text-sm font-mono text-text-muted">Try adjusting your filters.</p>
-        </div>
-      )
-    }
-
-    return (
-      <>
-        <p className="text-sm font-mono text-text-muted mb-4">
-          {total} hackathon{total !== 1 ? 's' : ''} found
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {finalHackathons.map((h, i) => (
-            <HackathonCard
-              key={h.id}
-              hackathon={{
-                ...h,
-                prizePool: h.prizePool ? Number(h.prizePool) : null,
-                entryFee: h.entryFee ? Number(h.entryFee) : null,
-              }}
-              index={i}
-            />
-          ))}
-        </div>
-        <Pagination totalItems={total} pageSize={PAGE_SIZE} />
-      </>
-    )
+    return renderHackathonList(finalHackathons, total, PAGE_SIZE)
   }
 
   const where: Prisma.HackathonWhereInput = {
@@ -197,7 +208,11 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
   const total = totalSettled.status === 'fulfilled' ? totalSettled.value : 0
 
   if (hackathonsSettled.status === 'rejected') {
-    console.error('Failed to query hackathons:', hackathonsSettled.reason)
+    console.error('Database connection unavailable, seamlessly falling back to cached directory:', hackathonsSettled.reason)
+    const filtered = filterDemoHackathons(resolvedParams)
+    const fallbackTotal = filtered.length
+    const fallbackPage = filtered.slice((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE)
+    return renderHackathonList(fallbackPage, fallbackTotal, PAGE_SIZE)
   }
 
   // Interleave by source to prevent clustering (e.g., all Unstop then all Devfolio)
@@ -224,6 +239,12 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
   const finalHackathons = interleaved.length > 0 ? interleaved : hackathonsRaw
 
   if (finalHackathons.length === 0) {
+    const hasSearchOrFilters = Boolean(q || theme || mode || fee || city || team || eligibility || duration || (scope && scope !== 'all'))
+    if (!hasSearchOrFilters) {
+      const filtered = filterDemoHackathons(resolvedParams)
+      return renderHackathonList(filtered.slice((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE), filtered.length, PAGE_SIZE)
+    }
+
     return (
       <div className="text-center py-20">
         <p className="font-serif text-2xl text-text-muted mb-2">No hackathons found.</p>

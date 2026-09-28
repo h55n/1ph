@@ -15,40 +15,40 @@ export const dynamicParams = true
 export async function generateStaticParams() {
   if (shouldUseDemoData()) return demoHackathons.map((row) => ({ slug: row.slug }))
 
-  const rows = await prisma.hackathon
-    .findMany({
+  try {
+    const rows = await prisma.hackathon.findMany({
       where: { status: { in: ['OPEN', 'CLOSING_SOON', 'UPCOMING'] } },
       select: { slug: true },
       orderBy: { registrationClose: 'asc' },
       take: 500,
     })
-    .catch(() => [])
-  return rows.map((row) => ({ slug: row.slug }))
+    if (rows && rows.length > 0) return rows.map((row) => ({ slug: row.slug }))
+  } catch {
+    // fallback to demo hackathons
+  }
+  return demoHackathons.map((row) => ({ slug: row.slug }))
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
-  if (shouldUseDemoData()) {
-    const h = findDemoHackathon(slug)
-    if (!h) return {}
-    const desc = h.longDescription || h.description
-    return {
-      title: `${h.title} — ${h.organizerName} | 1ph`,
-      description: desc?.slice(0, 160),
-      openGraph: {
-        title: h.title,
-        description: desc?.slice(0, 160),
-        images: [`/api/og?slug=${slug}`],
-      },
+  let h: { title: string; description: string; longDescription?: string | null; organizerName: string } | null = null
+
+  if (!shouldUseDemoData()) {
+    try {
+      h = await prisma.hackathon.findUnique({
+        where: { slug },
+        select: { title: true, description: true, longDescription: true, organizerName: true },
+      })
+    } catch {
+      h = null
     }
   }
 
-  const h = await prisma.hackathon
-    .findUnique({
-      where: { slug },
-      select: { title: true, description: true, longDescription: true, organizerName: true },
-    })
-    .catch(() => null)
+  if (!h) {
+    const demoH = findDemoHackathon(slug)
+    if (demoH) h = demoH
+  }
+
   if (!h) return {}
   const desc = h.longDescription || h.description
   return {
@@ -88,22 +88,32 @@ function safeTag(tag: string): string {
 
 export default async function HackathonDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const h = shouldUseDemoData()
-    ? findDemoHackathon(slug)
-    : await prisma.hackathon.findUnique({ where: { slug } })
+  let h = null
+  if (!shouldUseDemoData()) {
+    try {
+      h = await prisma.hackathon.findUnique({ where: { slug } })
+    } catch {
+      h = null
+    }
+  }
+  if (!h) {
+    h = findDemoHackathon(slug)
+  }
   if (!h) notFound()
 
-  const session = shouldUseDemoData() ? null : await requireSupabaseUser()
-  const userId = session?.user.id
+  const session = shouldUseDemoData() ? null : await requireSupabaseUser().catch(() => null)
+  const userId = session?.user?.id
 
   let isBookmarked = false
   if (userId && !shouldUseDemoData()) {
-    const bm = await prisma.bookmark
-      .findUnique({
+    try {
+      const bm = await prisma.bookmark.findUnique({
         where: { userId_hackathonId: { userId, hackathonId: h.id } },
       })
-      .catch(() => null)
-    isBookmarked = !!bm
+      isBookmarked = !!bm
+    } catch {
+      isBookmarked = false
+    }
   }
 
   const isClosed = h.status === 'CLOSED'

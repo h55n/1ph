@@ -3,39 +3,36 @@ import { prisma } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import { VisualCalendar } from '@/components/VisualCalendar'
 
-export const revalidate = 0
+export const dynamic = 'force-dynamic'
 
 export default async function CalendarPage() {
   const session = await requireSupabaseUser()
   if (!session) redirect('/login?callbackUrl=/calendar')
 
-  // Fetch registrations
-  const registrations = await prisma.registration.findMany({
-    where: { userId: session.user.id },
-    include: {
-      hackathon: {
-        select: {
-          id: true, slug: true, title: true, organizerName: true, organizerLogoUrl: true,
-          prestigeTier: true, status: true, prizePool: true, prizeCurrency: true,
-          prizeDescription: true, entryFee: true, entryFeeCurrency: true,
-          registrationClose: true, eventStart: true, eventEnd: true, mode: true, themeTags: true, scope: true,
-          description: true,
+  let registrations: any[] = []
+  try {
+    registrations = await prisma.registration.findMany({
+      where: { userId: session.user.id },
+      include: {
+        hackathon: {
+          select: {
+            id: true, slug: true, title: true, organizerName: true, organizerLogoUrl: true,
+            prestigeTier: true, status: true, prizePool: true, prizeCurrency: true,
+            prizeDescription: true, entryFee: true, entryFeeCurrency: true,
+            registrationClose: true, eventStart: true, eventEnd: true, mode: true, themeTags: true, scope: true,
+            description: true,
+          }
+        }
+      },
+      orderBy: {
+        hackathon: {
+          eventStart: 'asc',
         }
       }
-    },
-    orderBy: {
-      hackathon: {
-        eventStart: 'asc', // Sort by upcoming events
-      }
-    }
-  })
-
-  // Fetch bookmarks just to pass to card, though we'll only pass true if it's bookmarked
-  const bookmarks = await prisma.bookmark.findMany({
-    where: { userId: session.user.id },
-    select: { hackathonId: true }
-  })
-  const bookmarkedIds = new Set(bookmarks.map(b => b.hackathonId))
+    })
+  } catch (error) {
+    console.error('Calendar DB lookup error:', error)
+  }
 
   if (registrations.length === 0) {
     return (

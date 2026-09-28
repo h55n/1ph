@@ -8,16 +8,10 @@
       "env": [
         "DATABASE_URL",
         "DIRECT_URL",
-        "NEXTAUTH_URL",
-        "NEXTAUTH_SECRET",
-        "GOOGLE_CLIENT_ID",
-        "GOOGLE_CLIENT_SECRET",
-        "GITHUB_CLIENT_ID",
-        "GITHUB_CLIENT_SECRET",
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
         "REVALIDATE_SECRET",
-        "ADMIN_EMAIL",
-        "WEB_REVALIDATE_URL",
-        "WEB_REVALIDATE_SECRET"
+        "ADMIN_EMAILS"
       ]
     },
     "dev": {

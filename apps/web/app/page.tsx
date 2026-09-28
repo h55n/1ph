@@ -7,8 +7,10 @@ import { FilterBar } from '@/components/FilterBar'
 import { SearchBar } from '@/components/SearchBar'
 import { Pagination } from '@/components/Pagination'
 import { StatusToggle } from '@/components/StatusToggle'
+import { CategoryBrowser } from '@/components/CategoryBrowser'
 import type { Prisma } from '@prisma/client'
 import { demoHackathons, shouldUseDemoData } from '@/lib/demo-data'
+import { smartSearchHackathons } from '@/lib/smart-search'
 
 export const revalidate = 0
 
@@ -66,18 +68,10 @@ function filterDemoHackathons(params: SearchParams) {
   if (team === '2-4') filtered = filtered.filter((h) => (h.teamSizeMin <= 4) && (h.teamSizeMax ?? 99) >= 2)
   if (team === '5+') filtered = filtered.filter((h) => (h.teamSizeMax ?? 99) >= 5)
 
-  if (q) {
-    const tokens = q.toLowerCase().trim().split(/\s+/).filter(Boolean)
-    filtered = filtered.filter((h) => {
-      const searchable = `${h.title} ${h.organizerName} ${h.themeTags.join(' ')} ${h.description} ${h.indiaRegion ?? ''} ${h.source}`.toLowerCase()
-      return tokens.every((token) => searchable.includes(token))
-    })
-  }
-
   if (city) {
     const query = city.toLowerCase()
     const cityMap: Record<string, string[]> = {
-      delhi: ["delhi", "ncr", "noida", "gurgaon", "gurugram"],
+      delhi: ["delhi", "ncr", "noida", "gurgaon", "gurugram", "ghaziabad"],
       bengaluru: ["bengaluru", "bangalore"],
       mumbai: ["mumbai", "navi mumbai", "thane"],
       pune: ["pune"],
@@ -94,24 +88,35 @@ function filterDemoHackathons(params: SearchParams) {
     )
   }
 
-  filtered.sort((a, b) => {
-    if (sort === 'prestige') {
-      const tierMap: Record<string, number> = { T1: 1, T2: 2, T3: 3 }
-      const diff = (tierMap[a.prestigeTier] ?? 3) - (tierMap[b.prestigeTier] ?? 3)
-      if (diff !== 0) return diff
-      return (Number(b.prizePool ?? 0) - Number(a.prizePool ?? 0))
-    }
-    if (sort === 'deadline') {
-      const timeA = a.registrationClose ? a.registrationClose.getTime() : Infinity
-      const timeB = b.registrationClose ? b.registrationClose.getTime() : Infinity
-      return timeA - timeB
-    }
-    if (sort === 'prize') {
-      return (Number(b.prizePool ?? 0) - Number(a.prizePool ?? 0))
-    }
-    // Default: 'newest'
-    return b.createdAt.getTime() - a.createdAt.getTime()
-  })
+  // Smart search with semantic synonym matching and relevance scoring
+  if (q) {
+    filtered = smartSearchHackathons(filtered, q)
+  }
+
+  // Only apply custom sort if explicitly requested or if no smart search query was given
+  if (sort) {
+    filtered.sort((a, b) => {
+      if (sort === 'prestige') {
+        const tierMap: Record<string, number> = { T1: 1, T2: 2, T3: 3 }
+        const diff = (tierMap[a.prestigeTier] ?? 3) - (tierMap[b.prestigeTier] ?? 3)
+        if (diff !== 0) return diff
+        return (Number(b.prizePool ?? 0) - Number(a.prizePool ?? 0))
+      }
+      if (sort === 'deadline') {
+        const timeA = a.registrationClose ? a.registrationClose.getTime() : Infinity
+        const timeB = b.registrationClose ? b.registrationClose.getTime() : Infinity
+        return timeA - timeB
+      }
+      if (sort === 'prize') {
+        return (Number(b.prizePool ?? 0) - Number(a.prizePool ?? 0))
+      }
+      // 'newest'
+      return b.createdAt.getTime() - a.createdAt.getTime()
+    })
+  } else if (!q) {
+    // Default sort: newest
+    filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+  }
 
   return filtered
 }
@@ -119,24 +124,27 @@ function filterDemoHackathons(params: SearchParams) {
 function renderHackathonList(hackathons: any[], total: number, pageSize: number) {
   if (hackathons.length === 0) {
     return (
-      <div className="text-center py-20">
+      <div className="text-center py-20 bg-[#1E1108]/40 border border-[#4A2E18]/50 rounded-2xl p-8">
         <p className="font-serif text-2xl text-text-muted mb-2">No hackathons found.</p>
-        <p className="text-sm font-mono text-text-muted">Try adjusting your filters.</p>
+        <p className="text-sm font-mono text-text-muted">Try clearing your filters or searching for broader terms like &ldquo;AI&rdquo; or &ldquo;Web3&rdquo;.</p>
       </div>
     )
   }
 
   return (
     <>
-      <p className="text-sm font-mono text-text-muted mb-4">
-        {total} hackathon{total !== 1 ? 's' : ''} found
-      </p>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm font-mono text-text-muted">
+          Showing <span className="text-text-primary font-semibold">{total}</span> hackathon{total !== 1 ? 's' : ''}
+        </p>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
         {hackathons.map((h, i) => (
           <HackathonCard
             key={h.id}
             hackathon={{
               ...h,
+              coverImageUrl: h.coverImageUrl,
               prizePool: h.prizePool ? Number(h.prizePool) : null,
               entryFee: h.entryFee ? Number(h.entryFee) : null,
               registrationClose: h.registrationClose ? new Date(h.registrationClose) : null,
@@ -153,7 +161,7 @@ function renderHackathonList(hackathons: any[], total: number, pageSize: number)
 async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const resolvedParams = await searchParams
   const { scope, q, theme, mode, fee, team, eligibility, duration, sort, status, city, page } = resolvedParams
-  const PAGE_SIZE = 16
+  const PAGE_SIZE = 15
   const parsedPage = parseInt(page ?? '1', 10)
   const pageNum = isNaN(parsedPage) ? 1 : Math.max(1, parsedPage)
 
@@ -214,6 +222,7 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
       OR: [
         { title: { contains: q, mode: 'insensitive' as const } },
         { organizerName: { contains: q, mode: 'insensitive' as const } },
+        { description: { contains: q, mode: 'insensitive' as const } },
         { themeTags: { has: q } },
       ]
     })
@@ -233,128 +242,95 @@ async function HackathonGrid({ searchParams }: { searchParams: Promise<SearchPar
     newest:   { createdAt: 'desc' },
     prestige: [
       { prestigeTier: 'asc' },
-      { registrationClose: 'asc' }
+      { prizePool: 'desc' }
     ],
     deadline: { registrationClose: 'asc' },
     prize:    { prizePool: 'desc' },
   }
-  
-  const orderBy = SORT_MAP[sort ?? 'newest'] ?? SORT_MAP.newest
 
-  const [hackathonsSettled, totalSettled] = await Promise.allSettled([
-    prisma.hackathon.findMany({
-      where,
-      orderBy,
-      take: PAGE_SIZE,
-      skip: (pageNum - 1) * PAGE_SIZE,
-      select: {
-        id: true, slug: true, title: true, organizerName: true, organizerLogoUrl: true,
-        prestigeTier: true, status: true, prizePool: true, prizeCurrency: true,
-        prizeDescription: true, entryFee: true, entryFeeCurrency: true,
-        registrationClose: true, mode: true, themeTags: true, scope: true,
-        description: true, source: true,
-      },
-    }),
-    prisma.hackathon.count({ where }),
-  ])
+  const orderBy = (sort && SORT_MAP[sort]) ? SORT_MAP[sort] : SORT_MAP.newest
 
-  const hackathonsRaw = hackathonsSettled.status === 'fulfilled' ? hackathonsSettled.value : []
-  const total = totalSettled.status === 'fulfilled' ? totalSettled.value : 0
+  try {
+    const [hackathons, total] = await Promise.all([
+      prisma.hackathon.findMany({
+        where,
+        orderBy,
+        skip: (pageNum - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          organizerName: true,
+          organizerLogoUrl: true,
+          prestigeTier: true,
+          status: true,
+          prizePool: true,
+          prizeCurrency: true,
+          prizeDescription: true,
+          entryFee: true,
+          entryFeeCurrency: true,
+          registrationClose: true,
+          mode: true,
+          themeTags: true,
+          scope: true,
+          indiaRegion: true,
+          description: true,
+        },
+      }),
+      prisma.hackathon.count({ where }),
+    ])
 
-  if (hackathonsSettled.status === 'rejected') {
-    console.error('Database connection unavailable, seamlessly falling back to cached directory:', hackathonsSettled.reason)
+    return renderHackathonList(hackathons, total, PAGE_SIZE)
+  } catch (err) {
+    console.error('Database query failed in HackathonGrid:', err)
     const filtered = filterDemoHackathons(resolvedParams)
-    const fallbackTotal = filtered.length
-    const fallbackPage = filtered.slice((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE)
-    return renderHackathonList(fallbackPage, fallbackTotal, PAGE_SIZE)
+    const total = filtered.length
+    const finalHackathons = filtered.slice((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE)
+    return renderHackathonList(finalHackathons, total, PAGE_SIZE)
   }
-
-  // Interleave by source to prevent clustering (e.g., all Unstop then all Devfolio)
-  const interleaved: typeof hackathonsRaw = []
-  if (hackathonsRaw.length > 0) {
-    const groups: Record<string, typeof hackathonsRaw> = {}
-    hackathonsRaw.forEach(h => {
-      if (!groups[h.source]) groups[h.source] = []
-      groups[h.source].push(h)
-    })
-    
-    const sources = Object.keys(groups)
-    let maxLen = Math.max(...sources.map(s => groups[s].length))
-    
-    for (let i = 0; i < maxLen; i++) {
-      for (const s of sources) {
-        if (groups[s][i]) {
-          interleaved.push(groups[s][i])
-        }
-      }
-    }
-  }
-
-  const finalHackathons = interleaved.length > 0 ? interleaved : hackathonsRaw
-
-  if (finalHackathons.length === 0) {
-    const hasSearchOrFilters = Boolean(q || theme || mode || fee || city || team || eligibility || duration || (scope && scope !== 'all'))
-    if (!hasSearchOrFilters) {
-      const filtered = filterDemoHackathons(resolvedParams)
-      return renderHackathonList(filtered.slice((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE), filtered.length, PAGE_SIZE)
-    }
-
-    return (
-      <div className="text-center py-20">
-        <p className="font-serif text-2xl text-text-muted mb-2">No hackathons found.</p>
-        <p className="text-sm font-mono text-text-muted">Try adjusting your filters.</p>
-      </div>
-    )
-  }
-
-  return (
-    <>
-      <p className="text-sm font-mono text-text-muted mb-4">
-        {total} hackathon{total !== 1 ? 's' : ''} found
-      </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-        {finalHackathons.map((h, i) => (
-          <HackathonCard
-            key={h.id}
-            hackathon={{
-              ...h,
-              prizePool: h.prizePool ? Number(h.prizePool) : null,
-              entryFee: h.entryFee ? Number(h.entryFee) : null,
-              registrationClose: h.registrationClose,
-            }}
-            index={i}
-          />
-        ))}
-      </div>
-      <Pagination totalItems={total} pageSize={PAGE_SIZE} />
-    </>
-  )
 }
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   return (
     <div className="space-y-6">
-      <div className="pt-4 pb-2">
-        <h1 className="font-serif text-4xl md:text-5xl text-text-primary mb-2">
+      {/* Luma Hero Banner */}
+      <div className="pt-6 pb-2">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/10 border border-accent/25 text-accent font-mono text-xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+            290+ Active Hackathons
+          </span>
+          <span className="text-xs font-mono text-text-muted">
+            $15.8M+ Total Prize Pool
+          </span>
+        </div>
+        <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl text-text-primary mb-3 tracking-tight">
           Every hackathon.{' '}
-          <span className="text-accent">One place.</span>
+          <span className="text-accent underline decoration-accent/30 underline-offset-8">One place.</span>
         </h1>
-        <p className="text-text-muted font-mono text-sm">
-          No ads. No noise. Just hackathons worth your time.
+        <p className="text-text-muted font-sans text-sm sm:text-base max-w-2xl leading-relaxed">
+          The cleanest hackathon directory on the internet. Filter by AI, Web3, location, and prize pool. No clutter, no noise.
         </p>
       </div>
 
-      <div className="space-y-3">
-        <div className="flex items-center gap-3 flex-wrap">
+      {/* Luma Category Exploration Bento Grid */}
+      <CategoryBrowser />
+
+      {/* Search & Navigation Bar */}
+      <div className="space-y-4 pt-1">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <ScopeToggle />
           <SearchBar />
         </div>
 
-        <StatusToggle />
-
-        <FilterBar />
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <StatusToggle />
+          <FilterBar />
+        </div>
       </div>
 
+      {/* Main Hackathons Grid */}
       <Suspense fallback={<SkeletonGrid />}>
         <HackathonGrid searchParams={searchParams} />
       </Suspense>

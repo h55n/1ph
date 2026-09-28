@@ -29,6 +29,7 @@ interface HackathonCardProps {
     title: string
     organizerName: string
     organizerLogoUrl?: string | null
+    coverImageUrl?: string | null
     prestigeTier: 'T1' | 'T2' | 'T3'
     status: 'UPCOMING' | 'OPEN' | 'CLOSING_SOON' | 'CLOSED'
     prizePool?: number | null
@@ -200,46 +201,53 @@ export function HackathonCard({
       aria-label={`${hackathon.title} by ${hackathon.organizerName}`}
       prefetch={true}
       className={cn(
-        'group relative flex flex-col bg-[#1E1108] hover:bg-[#28170C]',
-        'border border-[#4A2E18]/70 hover:border-accent/50 rounded-card overflow-hidden',
-        'shadow-md hover:shadow-2xl hover:shadow-black/70',
+        'group relative flex flex-col bg-[#1A1009] hover:bg-[#23150D]',
+        'border border-[#4A2E18]/70 hover:border-accent/60 rounded-card overflow-hidden',
+        'shadow-md hover:shadow-2xl hover:shadow-black/75',
         'transition-all duration-300 ease-out hover:-translate-y-1.5',
         isClosed && 'opacity-65',
         'opacity-0 animate-fade-in'
       )}
-      style={{ animationDelay: `${Math.min(index, 7) * 80}ms` }}
+      style={{ animationDelay: `${Math.min(index, 7) * 70}ms` }}
     >
       {/* Visual Header / Cover Banner (Luma Style) */}
-      <div className="relative w-full h-36 sm:h-40 overflow-hidden bg-[#120803] select-none border-b border-white/[0.08]">
-        {/* Dynamic mesh gradient background with smooth scale on hover */}
-        <div 
-          className={cn(
-            'absolute inset-0 bg-gradient-to-br transition-transform duration-700 ease-out group-hover:scale-105',
-            themeVisuals.gradient
-          )}
-        >
-          {/* Subtle dot matrix grid */}
-          <div className="absolute inset-0 opacity-25 bg-[radial-gradient(#ffffff25_1px,transparent_1px)] [background-size:14px_14px]" />
-          
-          {/* Ambient luminous orb */}
+      <div className="relative w-full h-40 sm:h-44 overflow-hidden bg-[#120803] select-none border-b border-white/[0.08]">
+        {/* Curated Photographic Artwork or Generative Ambient Canvas */}
+        {hackathon.coverImageUrl ? (
+          <div className="absolute inset-0 overflow-hidden">
+            <Image
+              src={hackathon.coverImageUrl}
+              alt={hackathon.title}
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              className="object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
+            />
+            {/* Luma dark glass gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#1A1009] via-black/35 to-black/30" />
+          </div>
+        ) : (
           <div 
             className={cn(
-              'absolute -top-10 -right-10 w-44 h-44 rounded-full blur-2xl transition-opacity duration-500 opacity-60 group-hover:opacity-90',
-              themeVisuals.glowColor
-            )} 
-          />
-
-          {/* Watermark Category Glyph */}
-          <div className="absolute -bottom-4 -right-2 text-white/[0.08] group-hover:text-white/[0.15] transition-all duration-500 transform rotate-12 group-hover:rotate-6 group-hover:scale-110">
-            <WatermarkIcon className="w-28 h-28 stroke-[1.2]" />
+              'absolute inset-0 bg-gradient-to-br transition-transform duration-700 ease-out group-hover:scale-105',
+              themeVisuals.gradient
+            )}
+          >
+            <div className="absolute inset-0 opacity-25 bg-[radial-gradient(#ffffff25_1px,transparent_1px)] [background-size:14px_14px]" />
+            <div 
+              className={cn(
+                'absolute -top-10 -right-10 w-44 h-44 rounded-full blur-2xl transition-opacity duration-500 opacity-60 group-hover:opacity-90',
+                themeVisuals.glowColor
+              )} 
+            />
+            <div className="absolute -bottom-4 -right-2 text-white/[0.08] group-hover:text-white/[0.15] transition-all duration-500 transform rotate-12 group-hover:rotate-6 group-hover:scale-110">
+              <WatermarkIcon className="w-28 h-28 stroke-[1.2]" />
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-t from-[#1A1009] via-transparent to-black/25" />
           </div>
-
-          {/* Vignette bottom shadow to blend seamlessly */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#1E1108]/90 via-transparent to-black/25" />
-        </div>
+        )}
 
         {/* Signature Luma Calendar Badge (Top-Left) */}
-        <div className="absolute top-3 left-3 z-10 flex flex-col items-center justify-center min-w-[50px] px-2.5 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/20 shadow-lg group-hover:border-white/35 transition-colors">
+        <div className="absolute top-3 left-3 z-10 flex flex-col items-center justify-center min-w-[50px] px-2.5 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/20 shadow-lg group-hover:border-white/40 transition-colors">
           <span className="text-[10px] font-mono font-bold tracking-widest text-accent uppercase leading-none">
             {calendarBadge.month}
           </span>
@@ -258,7 +266,7 @@ export function HackathonCard({
 
       {/* Card Content (Body) */}
       <div className="p-4 sm:p-5 flex flex-col flex-1 justify-between gap-3 relative z-10">
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2">
           {/* Subtitle row: Status + Time indicator */}
           <div className="flex items-center justify-between gap-2 text-xs">
             <StatusChip status={hackathon.status} />
@@ -275,8 +283,15 @@ export function HackathonCard({
             {hackathon.title}
           </h3>
 
+          {/* Meaningful, worth-it Short Summary (Luma Description) */}
+          {hackathon.description && (
+            <p className="text-xs text-text-muted/90 font-sans leading-relaxed line-clamp-2 min-h-[2.2rem]">
+              {hackathon.description}
+            </p>
+          )}
+
           {/* Host / Organizer Row (Classic Luma presentation) */}
-          <div className="flex items-center justify-between text-xs text-text-muted pt-0.5">
+          <div className="flex items-center justify-between text-xs text-text-muted pt-1">
             <div className="flex items-center gap-2 min-w-0">
               {hackathon.organizerLogoUrl ? (
                 <Image

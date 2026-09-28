@@ -6,6 +6,8 @@ export interface DemoHackathon {
   slug: string
   organizerName: string
   organizerLogoUrl: string | null
+  coverImageUrl?: string | null
+  category?: string | null
   description: string
   longDescription: string | null
   themeTags: string[]
@@ -41,6 +43,8 @@ export interface DemoHackathon {
 
 export const demoHackathons: DemoHackathon[] = (rawHackathons as any[]).map((h) => ({
   ...h,
+  coverImageUrl: h.coverImageUrl ?? null,
+  category: h.category ?? null,
   mode: h.mode as 'ONLINE' | 'OFFLINE' | 'HYBRID',
   eligibility: h.eligibility as 'STUDENTS' | 'OPEN' | 'PROFESSIONALS',
   durationType: h.durationType as 'HR24' | 'HR48' | 'WEEK' | 'MONTH' | 'CUSTOM',

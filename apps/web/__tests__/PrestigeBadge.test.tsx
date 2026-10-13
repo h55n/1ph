@@ -6,14 +6,14 @@ describe('PrestigeBadge', () => {
     render(<PrestigeBadge tier="T1" />)
     const badge = screen.getByText('T1')
     expect(badge).toBeInTheDocument()
-    expect(badge).toHaveClass('text-yellow-400')
+    expect(badge).toHaveClass('text-amber-300')
   })
 
   it('renders T2 badge correctly', () => {
     render(<PrestigeBadge tier="T2" />)
     const badge = screen.getByText('T2')
     expect(badge).toBeInTheDocument()
-    expect(badge).toHaveClass('text-slate-300')
+    expect(badge).toHaveClass('text-slate-200')
   })
 
   it('does not render T3 badge', () => {
